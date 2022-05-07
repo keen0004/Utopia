@@ -1,0 +1,8 @@
+generate native go code by source code
+abigen --sol ./simple.sol --pkg contracts --out ./simple.go
+
+compile source code with solc and generate the abi & bin
+solc ./simple.sol --bin --abi --optimize --output-dir ./
+
+generate native go code by abi
+abigen --abi ./simple.abi --pkg contracts --type simple --out ./simple.go
