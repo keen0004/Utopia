@@ -143,27 +143,13 @@ func (chain *EthChain) BlockByHash(hash []byte) (*types.Block, error) {
 	return chain.Client.BlockByHash(context.Background(), common.BytesToHash(hash))
 }
 
-func (chain *EthChain) Transaction(hash []byte) (*types.Transaction, error) {
+func (chain *EthChain) Transaction(hash []byte) (*types.Transaction, bool, error) {
 	chain.refresh()
 	if !chain.connected {
-		return nil, errors.New("Chain not connected")
+		return nil, false, errors.New("Chain not connected")
 	}
 
-	tx, _, err := chain.Client.TransactionByHash(context.Background(), common.BytesToHash(hash))
-	if err != nil {
-		return nil, err
-	}
-
-	return tx, nil
-}
-
-func (chain *EthChain) PendingTransaction() (types.Transactions, error) {
-	chain.refresh()
-	if !chain.connected {
-		return nil, errors.New("Chain not connected")
-	}
-
-	return chain.PendingTransaction()
+	return chain.Client.TransactionByHash(context.Background(), common.BytesToHash(hash))
 }
 
 func (chain *EthChain) Receipt(hash []byte) (*types.Receipt, error) {
@@ -266,6 +252,10 @@ func (chain *EthChain) Transfer(to []string, value []*big.Int, wallet wallet.Wal
 
 	for index, address := range to {
 		if address == wallet.Address() {
+			continue
+		}
+
+		if value[index].Cmp(big.NewInt(0)) == 0 {
 			continue
 		}
 

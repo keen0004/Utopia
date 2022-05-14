@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	"utopia/internal/chain"
+	"utopia/internal/excel"
 	"utopia/internal/helper"
 	"utopia/internal/logger"
 	"utopia/internal/wallet"
@@ -53,6 +54,21 @@ var (
 		Usage: "The value list in eth",
 		Value: "",
 	}
+	GasPriceFlag = cli.Uint64Flag{
+		Name:  "gas",
+		Usage: "The gas price for tx",
+		Value: 0,
+	}
+	HashFlag = cli.StringFlag{
+		Name:  "hash",
+		Usage: "The transaction hash in hex mode",
+		Value: "",
+	}
+	FileFlag = cli.StringFlag{
+		Name:  "file",
+		Usage: "The excel file path with address list",
+		Value: "",
+	}
 
 	cmdBalance = cli.Command{
 		Name:   "balance",
@@ -75,6 +91,7 @@ var (
 			PasswordFlag,
 			ToFlag,
 			ValueFlag,
+			FileFlag,
 		},
 	}
 	cmdMerge = cli.Command{
@@ -96,6 +113,8 @@ var (
 			ChainFlag,
 			KeyFlag,
 			PasswordFlag,
+			HashFlag,
+			GasPriceFlag,
 		},
 	}
 	cmdRpcServer = cli.Command{
@@ -170,6 +189,7 @@ func TransferBalance(ctx *cli.Context) error {
 	password := ctx.String(PasswordFlag.Name)
 	to := ctx.String(ToFlag.Name)
 	value := ctx.String(ValueFlag.Name)
+	file := ctx.String(FileFlag.Name)
 
 	meta, err := chain.ChainMetaByName(chainName)
 	if err != nil {
@@ -180,6 +200,16 @@ func TransferBalance(ctx *cli.Context) error {
 	values := strings.Split(value, ",")
 	if len(addresss) != len(values) {
 		return errors.New("Not match the address and value list")
+	}
+
+	if file != "" {
+		alist, vlist, err := readTransferFile(file)
+		if err != nil {
+			return err
+		}
+
+		addresss = append(addresss, alist...)
+		values = append(values, vlist...)
 	}
 
 	logger.Debug("Total address is %d", len(addresss))
@@ -242,6 +272,9 @@ func MergeBalance(ctx *cli.Context) error {
 		return nil
 	}
 
+	toList := make([]string, 0)
+	valueList := make([]string, 0)
+
 	total := new(big.Int)
 	for _, w := range wallet {
 		if w.Address() == to {
@@ -267,6 +300,13 @@ func MergeBalance(ctx *cli.Context) error {
 		}
 
 		total = new(big.Int).Add(total, value)
+		toList = append(toList, w.Address())
+		valueList = append(valueList, strconv.FormatFloat(float64(helper.WeiToEth(value)), 'f', 5, 32))
+	}
+
+	err = saveTransferFile(toList, valueList, "./transfer.xlsx")
+	if err != nil {
+		log.Warn("Write transfer log failed with %v", err)
 	}
 
 	fmt.Printf("Total merge balance %f\n", helper.WeiToEth(total))
@@ -277,6 +317,8 @@ func Speedup(ctx *cli.Context) error {
 	chainName := ctx.String(ChainFlag.Name)
 	key := ctx.String(KeyFlag.Name)
 	password := ctx.String(PasswordFlag.Name)
+	gas := ctx.Uint64(GasPriceFlag.Name)
+	hash := ctx.String(HashFlag.Name)
 
 	meta, err := chain.ChainMetaByName(chainName)
 	if err != nil {
@@ -300,57 +342,74 @@ func Speedup(ctx *cli.Context) error {
 		return err
 	}
 
+	if gas != 0 {
+		if gas < gasprice.Uint64() {
+			return errors.New("Input gas price is less")
+		}
+
+		gasprice = *new(big.Int).SetUint64(gas)
+	}
+
 	// query pending tx
-	txs, err := chain.PendingTransaction()
+	tx, pending, err := chain.Transaction(helper.Str2bytes(hash))
 	if err != nil {
 		return err
 	}
 
-	log.Debug("Total speed up transaction size %d", len(txs))
-
-	count := 0
-	for _, tx := range txs {
-		if gasprice.Cmp(tx.GasPrice()) < 0 {
-			continue
-		}
-
-		err = chain.SendTransaction(types.NewTransaction(tx.Nonce(), *tx.To(), tx.Value(), tx.Gas(), &gasprice, tx.Data()), wallet)
-		if err != nil {
-			log.Warn("Speed up tx %s failed with error %v", tx.Hash().Hex(), err)
-			continue
-		}
-
-		count++
+	if !pending {
+		return errors.New("Transaction is not pending")
 	}
 
-	fmt.Printf("Speed up transaction size %d", count)
+	if gasprice.Cmp(tx.GasPrice()) < 0 {
+		return errors.New("Input gas less than transaction gas")
+	}
+
+	err = chain.SendTransaction(types.NewTransaction(tx.Nonce(), *tx.To(), tx.Value(), tx.Gas(), &gasprice, tx.Data()), wallet)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Speed up transaction %s", hash)
 	return nil
 }
 
 func ListRpc(ctx *cli.Context) error {
 	chainName := ctx.String(ChainFlag.Name)
 
-	meta, err := chain.ChainMetaByName(chainName)
-	if err != nil {
-		return err
-	}
-
-	chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
-	if chain == nil {
-		return errors.New("Connect chain failed")
-	}
-	defer chain.DisConnect()
-
-	for index, url := range meta.RpcServer {
-		start := time.Now()
-
-		err = chain.Connect([]string{url}, true)
+	metaList := make([]chain.ChainMeta, 0)
+	if chainName == "" {
+		metaList = chain.ChainList
+	} else {
+		meta, err := chain.ChainMetaByName(chainName)
 		if err != nil {
-			continue
+			return err
 		}
 
-		latency := time.Now().Sub(start)
-		fmt.Printf("[%d] url=%s, latency=%d ms\n", index, url, latency.Milliseconds())
+		metaList = append(metaList, *meta)
+	}
+
+	if len(metaList) == 0 {
+		return errors.New("Empty chain list")
+	}
+
+	for _, meta := range metaList {
+		chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
+		if chain == nil {
+			return errors.New("Connect chain failed")
+		}
+		defer chain.DisConnect()
+
+		for index, url := range meta.RpcServer {
+			start := time.Now()
+
+			err := chain.Connect([]string{url}, true)
+			if err != nil {
+				continue
+			}
+
+			latency := time.Now().Sub(start)
+			fmt.Printf("[%s][%d] url=%s, latency=%d ms\n", meta.Name, index, url, latency.Milliseconds())
+		}
 	}
 
 	return nil
@@ -359,22 +418,105 @@ func ListRpc(ctx *cli.Context) error {
 func QueryGas(ctx *cli.Context) error {
 	chainName := ctx.String(ChainFlag.Name)
 
-	meta, err := chain.ChainMetaByName(chainName)
-	if err != nil {
-		return err
+	metaList := make([]chain.ChainMeta, 0)
+	if chainName == "" {
+		metaList = chain.ChainList
+	} else {
+		meta, err := chain.ChainMetaByName(chainName)
+		if err != nil {
+			return err
+		}
+
+		metaList = append(metaList, *meta)
 	}
 
-	chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
-	if chain == nil {
-		return errors.New("Connect chain failed")
-	}
-	defer chain.DisConnect()
-
-	gasprice, err := chain.GasPrice()
-	if err != nil {
-		return err
+	if len(metaList) == 0 {
+		return errors.New("Empty chain list")
 	}
 
-	fmt.Printf("Gas %d on chain %s\n", gasprice.Uint64(), chainName)
+	for _, meta := range metaList {
+		chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
+		if chain == nil {
+			return errors.New("Connect chain failed")
+		}
+		defer chain.DisConnect()
+
+		gasprice, err := chain.GasPrice()
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Gas %d on chain %s\n", gasprice.Uint64(), meta.Name)
+	}
+
 	return nil
+}
+
+func readTransferFile(path string) ([]string, []string, error) {
+	to := make([]string, 0)
+	value := make([]string, 0)
+
+	file, err := excel.NewExcel(path)
+	if err != nil {
+		return to, value, err
+	}
+
+	err = file.Open()
+	if err != nil {
+		return to, value, err
+	}
+	defer file.Close(false)
+
+	data, err := file.ReadAll("transfer")
+	if err != nil {
+		return to, value, err
+	}
+
+	for index, row := range data {
+		// skip the header
+		if index == 0 {
+			continue
+		}
+
+		if len(row) != 3 {
+			return to, value, errors.New("Invalid file format")
+		}
+
+		to = append(to, row[1])
+		value = append(value, row[2])
+	}
+
+	return to, value, nil
+}
+
+func saveTransferFile(to []string, value []string, path string) error {
+	if len(to) != len(value) {
+		return errors.New("Not match to and value")
+	}
+
+	file, err := excel.NewExcel(path)
+	if err != nil {
+		return err
+	}
+
+	err = file.Open()
+	if err != nil {
+		return err
+	}
+	defer file.Close(true)
+
+	data := make([][]string, 0)
+	header := []string{"index", "address", "value"}
+	data = append(data, header)
+
+	for i, key := range to {
+		row := make([]string, 0, 3)
+		row = append(row, strconv.Itoa(i+1))
+		row = append(row, key)
+		row = append(row, value[i])
+
+		data = append(data, row)
+	}
+
+	return file.WriteAll("transfer", data)
 }

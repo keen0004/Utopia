@@ -32,8 +32,7 @@ type Chain interface {
 	BlockByNumber(number uint64) (*types.Block, error)
 	BlockByHash(hash []byte) (*types.Block, error)
 
-	Transaction(hash []byte) (*types.Transaction, error)
-	PendingTransaction() (types.Transactions, error)
+	Transaction(hash []byte) (*types.Transaction, bool, error)
 	Receipt(hash []byte) (*types.Receipt, error)
 	SendTransaction(tx *types.Transaction, wallet wallet.Wallet) error
 	EstimateGas(tx *types.Transaction) (uint64, error)

@@ -57,12 +57,8 @@ func (chain *BtcChain) BlockByHash(hash []byte) (*types.Block, error) {
 	return nil, nil
 }
 
-func (chain *BtcChain) Transaction(hash []byte) (*types.Transaction, error) {
-	return nil, nil
-}
-
-func (chain *BtcChain) PendingTransaction() (types.Transactions, error) {
-	return nil, nil
+func (chain *BtcChain) Transaction(hash []byte) (*types.Transaction, bool, error) {
+	return nil, false, nil
 }
 
 func (chain *BtcChain) Receipt(hash []byte) (*types.Receipt, error) {

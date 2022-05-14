@@ -19,6 +19,11 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
+const (
+	MAX_KEY_SIZE    = 10000
+	MAX_THREAD_SIZE = 8
+)
+
 type KeyInfo struct {
 	privatekey string
 	address    string
@@ -127,12 +132,12 @@ func GenKeyFiles(ctx *cli.Context) error {
 	}
 
 	// check the max input
-	if keynum > 10000 {
-		keynum = 10000
+	if keynum > MAX_KEY_SIZE {
+		keynum = MAX_KEY_SIZE
 	}
 
-	if thread > 8 {
-		thread = 8
+	if thread > MAX_THREAD_SIZE {
+		thread = MAX_THREAD_SIZE
 	}
 
 	// create key store files directory
@@ -162,7 +167,6 @@ func GenKeyFiles(ctx *cli.Context) error {
 
 	// start go routine for generate key files
 	for i := 0; i < thread; i++ {
-
 		// caclute the generate number by this thread
 		num := keynum / thread
 		start := num*i + 1
@@ -196,7 +200,6 @@ func GenKeyFiles(ctx *cli.Context) error {
 	}
 
 	fmt.Fprintf(os.Stderr, "Success generate all key files\n")
-
 	return nil
 }
 
@@ -310,7 +313,6 @@ func VerifySig(ctx *cli.Context) error {
 
 func HashData(ctx *cli.Context) error {
 	data := ctx.String(DataFlag.Name)
-
 	if data == "" {
 		return errors.New("Invalid parameters for hash data")
 	}
