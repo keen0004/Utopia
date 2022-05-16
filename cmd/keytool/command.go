@@ -319,6 +319,12 @@ func HashData(ctx *cli.Context) error {
 
 	hash := crypto.Keccak256(helper.Str2bytes(data))
 
+	// another impl
+	// var hash []byte
+	// h := sha3.NewLegacyKeccak256()
+	// h.Write(helper.Str2bytes(data))
+	// hash = h.Sum(hash)
+
 	fmt.Fprintf(os.Stderr, "Hash result: 0x%s\n", hex.EncodeToString(hash))
 
 	return nil

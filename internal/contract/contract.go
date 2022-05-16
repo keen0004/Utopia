@@ -11,5 +11,7 @@ type Contract interface {
 	Code() ([]byte, error)
 	ABI() string
 	SetABI(path string) error
-	Call(params string) error
+	EncodeABI(method string, data string, withfunc bool) ([]byte, error)
+	DecodeABI(method string, data []byte, withfunc bool) (string, error)
+	Call(params string) ([]interface{}, error)
 }

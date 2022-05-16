@@ -1,6 +1,12 @@
 package main
 
 import (
+	"encoding/hex"
+	"fmt"
+	"os"
+	"utopia/internal/contract"
+	"utopia/internal/helper"
+
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -59,6 +65,20 @@ var (
 		Name:  "param",
 		Usage: "The parameters for call contract",
 		Value: "",
+	}
+	DataFlag = cli.StringFlag{
+		Name:  "data",
+		Usage: "The abi argumetns",
+		Value: "",
+	}
+	FuncFlag = cli.StringFlag{
+		Name:  "func",
+		Usage: "The function protype",
+		Value: "",
+	}
+	SignFlag = cli.BoolFlag{
+		Name:  "sign",
+		Usage: "True or False to indicate function sign",
 	}
 
 	cmdDeploy = cli.Command{
@@ -214,6 +234,32 @@ var (
 			},
 		},
 	}
+	cmdAbi = cli.Command{
+		Name:  "abi",
+		Usage: "ABI encode and decode",
+		Subcommands: []cli.Command{
+			{
+				Name:   "encode",
+				Usage:  "Encode abi with arguments",
+				Action: EncodeABI,
+				Flags: []cli.Flag{
+					FuncFlag,
+					DataFlag,
+					SignFlag,
+				},
+			},
+			{
+				Name:   "decode",
+				Usage:  "Decode abi with arguments",
+				Action: DecodeABI,
+				Flags: []cli.Flag{
+					FuncFlag,
+					DataFlag,
+					SignFlag,
+				},
+			},
+		},
+	}
 )
 
 func DeployContract(ctx *cli.Context) error {
@@ -261,5 +307,35 @@ func ApproveERC721(ctx *cli.Context) error {
 }
 
 func PropertyQuery(ctx *cli.Context) error {
+	return nil
+}
+
+func EncodeABI(ctx *cli.Context) error {
+	method := ctx.String(FuncFlag.Name)
+	data := ctx.String(DataFlag.Name)
+	sign := ctx.Bool(SignFlag.Name)
+
+	contract := contract.NewContract(nil, "", contract.COMMON_CRONTACT)
+	result, err := contract.EncodeABI(method, data, sign)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(os.Stderr, "Result: 0x%s\n", hex.EncodeToString(result))
+	return nil
+}
+
+func DecodeABI(ctx *cli.Context) error {
+	method := ctx.String(FuncFlag.Name)
+	data := ctx.String(DataFlag.Name)
+	sign := ctx.Bool(SignFlag.Name)
+
+	contract := contract.NewContract(nil, "", contract.COMMON_CRONTACT)
+	result, err := contract.DecodeABI(method, helper.Str2bytes(data), sign)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(os.Stderr, "Result: %s\n", result)
 	return nil
 }

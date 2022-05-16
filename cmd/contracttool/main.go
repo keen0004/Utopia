@@ -22,6 +22,7 @@ func init() {
 		cmdList,
 		cmdERC20,
 		cmdERC721,
+		cmdAbi,
 	}
 }
 

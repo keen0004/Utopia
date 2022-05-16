@@ -3,6 +3,7 @@ package helper
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -74,6 +75,7 @@ func ParseParams(params string) (string, []string, error) {
 	return method, args, nil
 }
 
+// todo: not support array now
 func Str2Type(input string, totype reflect.Type) (interface{}, error) {
 	switch totype {
 	case reflect.TypeOf(uint8(0)):
@@ -107,4 +109,105 @@ func Str2Type(input string, totype reflect.Type) (interface{}, error) {
 	}
 
 	return nil, nil
+}
+
+// todo: not support array now
+func Type2Str(input interface{}, itype reflect.Type) (string, error) {
+	switch itype {
+	case reflect.TypeOf(uint8(0)):
+	case reflect.TypeOf(uint16(0)):
+	case reflect.TypeOf(uint32(0)):
+	case reflect.TypeOf(uint64(0)):
+	case reflect.TypeOf(int8(0)):
+	case reflect.TypeOf(int16(0)):
+	case reflect.TypeOf(int32(0)):
+	case reflect.TypeOf(int64(0)):
+		return fmt.Sprintf("%d", input), nil
+	case reflect.TypeOf(&big.Int{}):
+		return input.(*big.Int).String(), nil
+	case reflect.TypeOf(false):
+		return fmt.Sprintf("%b", input), nil
+	case reflect.TypeOf(""):
+		return input.(string), nil
+	case reflect.TypeOf(common.Address{}):
+		return input.(common.Address).Hex(), nil
+	case reflect.ArrayOf(32, reflect.TypeOf(byte(0))):
+	case reflect.SliceOf(reflect.TypeOf(byte(0))):
+		return fmt.Sprintf("0x%s", hex.EncodeToString(input.([]byte))), nil
+	default:
+		return "", errors.New("Not support type")
+	}
+
+	return "", nil
+}
+
+func Str2Array(args []string, index int, totype reflect.Type) ([]interface{}, error) {
+	if !strings.HasPrefix(args[index], "[") {
+		return nil, errors.New("Need array paramter but not found")
+	}
+
+	result := make([]interface{}, 0)
+	inarray := true
+
+	args[index] = args[index][1:]
+	if strings.HasSuffix(args[index], "]") {
+		args[index] = args[index][:len(args[index])-1]
+		inarray = false
+	}
+
+	v, err := Str2Type(args[index], totype)
+	if err != nil {
+		return nil, err
+	}
+
+	result = append(result, v)
+	for {
+		if !inarray {
+			break
+		}
+
+		index++
+		if len(args) <= index {
+			break
+		}
+
+		if strings.HasSuffix(args[index], "]") {
+			args[index] = args[index][:len(args[index])-1]
+			inarray = false
+		}
+
+		v, err = Str2Type(args[index], totype)
+		if err != nil {
+			return nil, err
+		}
+
+		result = append(result, v)
+	}
+
+	if inarray {
+		return nil, errors.New("Invalid array values")
+	}
+
+	return result, nil
+}
+
+func Array2Str(input interface{}, totype reflect.Type) (string, error) {
+	var builder strings.Builder
+	builder.WriteString("[")
+
+	data := input.([]interface{})
+	for i, d := range data {
+		output, err := Type2Str(d, totype)
+		if err != nil {
+			return "", err
+		}
+
+		builder.WriteString(output)
+		if i != len(data)-1 {
+			builder.WriteString(",")
+		}
+	}
+
+	builder.WriteString("]")
+	return builder.String(), nil
 }
