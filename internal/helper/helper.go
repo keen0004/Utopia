@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -77,6 +78,8 @@ func ParseParams(params string) (string, []string, error) {
 
 // todo: not support array now
 func Str2Type(input string, totype reflect.Type) (interface{}, error) {
+	input = strings.Trim(input, "\"")
+
 	switch totype {
 	case reflect.TypeOf(uint8(0)):
 	case reflect.TypeOf(uint16(0)):
@@ -141,13 +144,18 @@ func Type2Str(input interface{}, itype reflect.Type) (string, error) {
 	return "", nil
 }
 
-func Str2Array(args []string, index int, totype reflect.Type) ([]interface{}, error) {
+func Str2Array(args []string, index int, totype abi.Type) (interface{}, int, error) {
 	if !strings.HasPrefix(args[index], "[") {
-		return nil, errors.New("Need array paramter but not found")
+		return nil, index, errors.New("Need array paramter but not found")
 	}
 
-	result := make([]interface{}, 0)
+	result := reflect.MakeSlice(totype.GetType(), 0, 256)
 	inarray := true
+
+	// for empty slice
+	if args[index] == "[]" {
+		return result.Interface(), index + 1, nil
+	}
 
 	args[index] = args[index][1:]
 	if strings.HasSuffix(args[index], "]") {
@@ -155,18 +163,19 @@ func Str2Array(args []string, index int, totype reflect.Type) ([]interface{}, er
 		inarray = false
 	}
 
-	v, err := Str2Type(args[index], totype)
+	v, err := Str2Type(args[index], totype.Elem.GetType())
 	if err != nil {
-		return nil, err
+		return nil, index, err
 	}
 
-	result = append(result, v)
+	result = reflect.Append(result, reflect.ValueOf(v))
 	for {
+		index++
+
 		if !inarray {
 			break
 		}
 
-		index++
 		if len(args) <= index {
 			break
 		}
@@ -176,34 +185,34 @@ func Str2Array(args []string, index int, totype reflect.Type) ([]interface{}, er
 			inarray = false
 		}
 
-		v, err = Str2Type(args[index], totype)
+		v, err = Str2Type(args[index], totype.Elem.GetType())
 		if err != nil {
-			return nil, err
+			return nil, index, err
 		}
 
-		result = append(result, v)
+		result = reflect.Append(result, reflect.ValueOf(v))
 	}
 
 	if inarray {
-		return nil, errors.New("Invalid array values")
+		return nil, index, errors.New("Invalid array values")
 	}
 
-	return result, nil
+	return result.Interface(), index, nil
 }
 
 func Array2Str(input interface{}, totype reflect.Type) (string, error) {
 	var builder strings.Builder
 	builder.WriteString("[")
 
-	data := input.([]interface{})
-	for i, d := range data {
-		output, err := Type2Str(d, totype)
+	size := reflect.ValueOf(input).Len()
+	for i := 0; i < size; i++ {
+		output, err := Type2Str(reflect.ValueOf(input).Index(i).Interface(), totype)
 		if err != nil {
 			return "", err
 		}
 
 		builder.WriteString(output)
-		if i != len(data)-1 {
+		if i != size-1 {
 			builder.WriteString(",")
 		}
 	}

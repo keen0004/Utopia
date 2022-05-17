@@ -84,13 +84,14 @@ func (c *EthContract) Call(params string) ([]interface{}, error) {
 		}
 
 		if p.Type.Elem != nil {
-			subdata, err := helper.Str2Array(args, index, p.Type.Elem.GetType())
+			var subdata interface{}
+
+			subdata, index, err = helper.Str2Array(args, index, p.Type)
 			if err != nil {
 				return nil, err
 			}
 
 			data = append(data, subdata)
-			index = index + len(subdata)
 		} else {
 			v, err := helper.Str2Type(args[index], p.Type.GetType())
 			if err != nil {
@@ -132,6 +133,10 @@ func (c *EthContract) EncodeABI(method string, data string, withfunc bool) ([]by
 		argtypes[i] = strings.ToLower(strings.Trim(arg, " "))
 		if argtypes[i] == "uint" || argtypes[i] == "int" {
 			argtypes[i] = argtypes[i] + "256"
+		} else if argtypes[i] == "uint[]" {
+			argtypes[i] = "uint256[]"
+		} else if argtypes[i] == "int[]" {
+			argtypes[i] = "int256[]"
 		}
 
 		argtype, _ := abi.NewType(argtypes[i], "", nil)
@@ -152,13 +157,14 @@ func (c *EthContract) EncodeABI(method string, data string, withfunc bool) ([]by
 		}
 
 		if p.Type.Elem != nil {
-			subdata, err := helper.Str2Array(args, index, p.Type.Elem.GetType())
+			var subdata interface{}
+
+			subdata, index, err = helper.Str2Array(args, index, p.Type)
 			if err != nil {
 				return nil, err
 			}
 
 			argData = append(argData, subdata)
-			index = index + len(subdata)
 		} else {
 			v, err := helper.Str2Type(args[index], p.Type.GetType())
 			if err != nil {
@@ -170,7 +176,11 @@ func (c *EthContract) EncodeABI(method string, data string, withfunc bool) ([]by
 		}
 	}
 
-	pack, _ := arguments.Pack(argData...)
+	pack, err := arguments.Pack(argData...)
+	if err != nil {
+		return nil, err
+	}
+
 	result = append(result, pack...)
 
 	return result, nil
@@ -188,6 +198,10 @@ func (c *EthContract) DecodeABI(method string, data []byte, withfunc bool) (stri
 		argtypes[i] = strings.ToLower(strings.Trim(arg, " "))
 		if argtypes[i] == "uint" || argtypes[i] == "int" {
 			argtypes[i] = argtypes[i] + "256"
+		} else if argtypes[i] == "uint[]" {
+			argtypes[i] = "uint256[]"
+		} else if argtypes[i] == "int[]" {
+			argtypes[i] = "int256[]"
 		}
 
 		argtype, _ := abi.NewType(argtypes[i], "", nil)
