@@ -104,9 +104,19 @@ func (c *EthContract) Call(params string) ([]interface{}, error) {
 	}
 
 	var result []interface{}
-	err = c.client.Call(nil, &result, method, data)
-	if err != nil {
-		return nil, err
+	if m.IsConstant() {
+		err = c.client.Call(nil, &result, method, data...)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		tx, err := c.client.Transact(nil, method, data...)
+		if err != nil {
+			return nil, err
+		}
+
+		result = make([]interface{}, 0)
+		result = append(result, tx.Hash())
 	}
 
 	return result, nil
