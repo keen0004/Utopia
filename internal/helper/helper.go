@@ -28,21 +28,6 @@ func NewApp(version string, usage string) *cli.App {
 	return app
 }
 
-func Str2bytes(data string) []byte {
-	if strings.HasPrefix(data, "0x") || strings.HasPrefix(data, "0X") {
-		data = data[2:]
-
-		bytes, err := hex.DecodeString(data)
-		if err != nil {
-			return []byte("")
-		}
-
-		return bytes
-	}
-
-	return []byte(data)
-}
-
 func WeiToEth(wei *big.Int) float32 {
 	eth, _ := new(big.Float).Quo(new(big.Float).SetInt(wei), new(big.Float).SetInt(big.NewInt(1e+18))).Float32()
 	return eth
@@ -62,7 +47,7 @@ func ParseParams(params string) (string, []string, error) {
 		return "", []string{}, errors.New("Invalid parameters")
 	}
 
-	method := params[:index]
+	method := strings.Trim(params[:index], " ")
 	params = params[index+1:]
 
 	index = strings.Index(params, ")")
@@ -85,28 +70,28 @@ func Str2Type(input string, totype reflect.Type) (interface{}, error) {
 	case reflect.TypeOf(uint16(0)):
 	case reflect.TypeOf(uint32(0)):
 	case reflect.TypeOf(uint64(0)):
-		return strconv.ParseUint(input, 10, 64)
+		return strconv.ParseUint(strings.Trim(input, " "), 10, 64)
 	case reflect.TypeOf(int8(0)):
 	case reflect.TypeOf(int16(0)):
 	case reflect.TypeOf(int32(0)):
 	case reflect.TypeOf(int64(0)):
-		return strconv.ParseInt(input, 10, 64)
+		return strconv.ParseInt(strings.Trim(input, " "), 10, 64)
 	case reflect.TypeOf(&big.Int{}):
-		result, ok := new(big.Int).SetString(input, 10)
+		result, ok := new(big.Int).SetString(strings.Trim(input, " "), 10)
 		if !ok {
 			return nil, errors.New("Convert big.int failed")
 		}
 		return result, nil
 	case reflect.TypeOf(false):
-		return strconv.ParseBool(input)
+		return strconv.ParseBool(strings.Trim(input, " "))
 	case reflect.TypeOf(""):
 		return input, nil
 	case reflect.TypeOf(common.Address{}):
-		return common.HexToAddress(input), nil
+		return common.HexToAddress(strings.Trim(input, " ")), nil
 	case reflect.ArrayOf(32, reflect.TypeOf(byte(0))):
-		return Str2bytes(input), nil
+		return common.FromHex(strings.Trim(input, " ")), nil
 	case reflect.SliceOf(reflect.TypeOf(byte(0))):
-		return Str2bytes(input), nil
+		return common.FromHex(strings.Trim(input, " ")), nil
 	default:
 		return nil, errors.New("Not support type")
 	}

@@ -2,11 +2,15 @@ package main
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"utopia/internal/chain"
 	"utopia/internal/contract"
-	"utopia/internal/helper"
+	"utopia/internal/wallet"
 
+	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -263,10 +267,87 @@ var (
 )
 
 func DeployContract(ctx *cli.Context) error {
+	chainName := ctx.String(ChainFlag.Name)
+	key := ctx.String(KeyFlag.Name)
+	password := ctx.String(PasswordFlag.Name)
+	code := ctx.String(CodeFlag.Name)
+	abi := ctx.String(ABIFlag.Name)
+	params := ctx.String(ParamFlag.Name)
+
+	meta, err := chain.ChainMetaByName(chainName)
+	if err != nil {
+		return err
+	}
+
+	wallet := wallet.NewWallet(wallet.WALLET_ETH, key, password)
+	err = wallet.LoadKey()
+	if err != nil {
+		return err
+	}
+
+	chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
+	if chain == nil {
+		return errors.New("Connect chain failed")
+	}
+	defer chain.DisConnect()
+
+	contract := contract.NewContract(chain, "", contract.COMMON_CRONTACT)
+	err = contract.SetABI(abi)
+	if err != nil {
+		return err
+	}
+
+	bin, err := ioutil.ReadFile(code)
+	if err != nil {
+		return err
+	}
+
+	result, err := contract.Deploy(common.FromHex(string(bin)), params, wallet)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(os.Stderr, "Deploy contract address %s\n", result)
 	return nil
 }
 
 func CallContract(ctx *cli.Context) error {
+	chainName := ctx.String(ChainFlag.Name)
+	key := ctx.String(KeyFlag.Name)
+	password := ctx.String(PasswordFlag.Name)
+	address := ctx.String(ContractFlag.Name)
+	abi := ctx.String(ABIFlag.Name)
+	params := ctx.String(ParamFlag.Name)
+
+	meta, err := chain.ChainMetaByName(chainName)
+	if err != nil {
+		return err
+	}
+
+	wallet := wallet.NewWallet(wallet.WALLET_ETH, key, password)
+	err = wallet.LoadKey()
+	if err != nil {
+		return err
+	}
+
+	chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
+	if chain == nil {
+		return errors.New("Connect chain failed")
+	}
+	defer chain.DisConnect()
+
+	contract := contract.NewContract(chain, address, contract.COMMON_CRONTACT)
+	err = contract.SetABI(abi)
+	if err != nil {
+		return err
+	}
+
+	result, err := contract.Call(params, wallet)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(os.Stderr, "Call contract result: %s\n", result)
 	return nil
 }
 
@@ -331,7 +412,7 @@ func DecodeABI(ctx *cli.Context) error {
 	sign := ctx.Bool(SignFlag.Name)
 
 	contract := contract.NewContract(nil, "", contract.COMMON_CRONTACT)
-	result, err := contract.DecodeABI(method, helper.Str2bytes(data), sign)
+	result, err := contract.DecodeABI(method, common.FromHex(data), sign)
 	if err != nil {
 		return err
 	}

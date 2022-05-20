@@ -13,6 +13,7 @@ import (
 	"utopia/internal/logger"
 	"utopia/internal/wallet"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"gopkg.in/urfave/cli.v1"
@@ -351,7 +352,7 @@ func Speedup(ctx *cli.Context) error {
 	}
 
 	// query pending tx
-	tx, pending, err := chain.Transaction(helper.Str2bytes(hash))
+	tx, pending, err := chain.Transaction(common.FromHex(hash))
 	if err != nil {
 		return err
 	}

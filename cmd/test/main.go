@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"utopia/internal/helper"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/sha3"
 )
@@ -38,11 +38,11 @@ func main() {
 
 	data := "0x01234567890abcdef"
 
-	fmt.Printf("0x%s\n", hex.EncodeToString(crypto.Keccak256(helper.Str2bytes(data))))
+	fmt.Printf("0x%s\n", hex.EncodeToString(crypto.Keccak256(common.FromHex(data))))
 
 	var buf []byte
 	hash := sha3.NewLegacyKeccak256()
-	hash.Write(helper.Str2bytes(data))
+	hash.Write(common.FromHex(data))
 	buf = hash.Sum(buf)
 
 	fmt.Printf("0x%s\n", hex.EncodeToString(buf))

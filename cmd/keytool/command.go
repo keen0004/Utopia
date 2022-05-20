@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"sync"
 	"utopia/internal/excel"
-	"utopia/internal/helper"
 	"utopia/internal/logger"
 	"utopia/internal/wallet"
 
 	"github.com/cheggaaa/pb/v3"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/urfave/cli.v1"
 )
@@ -260,7 +260,7 @@ func SignMessage(ctx *cli.Context) error {
 	var privatekey *ecdsa.PrivateKey
 
 	if key != "" {
-		privatekey, err = crypto.ToECDSA(helper.Str2bytes(key))
+		privatekey, err = crypto.ToECDSA(common.FromHex(key))
 		if err != nil {
 			return err
 		}
@@ -276,7 +276,7 @@ func SignMessage(ctx *cli.Context) error {
 	}
 
 	// sign data
-	sign, err := crypto.Sign(crypto.Keccak256(helper.Str2bytes(data)), privatekey)
+	sign, err := crypto.Sign(crypto.Keccak256(common.FromHex(data)), privatekey)
 	if err != nil {
 		return err
 	}
@@ -295,12 +295,12 @@ func VerifySig(ctx *cli.Context) error {
 
 	var hash []byte
 	if len(data) == 66 {
-		hash = helper.Str2bytes(data)
+		hash = common.FromHex(data)
 	} else {
-		hash = crypto.Keccak256(helper.Str2bytes(data))
+		hash = crypto.Keccak256(common.FromHex(data))
 	}
 
-	recoveredPubkey, err := crypto.SigToPub(hash, helper.Str2bytes(sign))
+	recoveredPubkey, err := crypto.SigToPub(hash, common.FromHex(sign))
 	if err != nil {
 		return err
 	}
@@ -317,12 +317,12 @@ func HashData(ctx *cli.Context) error {
 		return errors.New("Invalid parameters for hash data")
 	}
 
-	hash := crypto.Keccak256(helper.Str2bytes(data))
+	hash := crypto.Keccak256(common.FromHex(data))
 
 	// another impl
 	// var hash []byte
 	// h := sha3.NewLegacyKeccak256()
-	// h.Write(helper.Str2bytes(data))
+	// h.Write(common.FromHex(data))
 	// hash = h.Sum(hash)
 
 	fmt.Fprintf(os.Stderr, "Hash result: 0x%s\n", hex.EncodeToString(hash))

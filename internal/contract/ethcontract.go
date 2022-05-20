@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"strings"
 	"utopia/internal/chain"
 	"utopia/internal/helper"
+	"utopia/internal/wallet"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -60,7 +62,65 @@ func (c *EthContract) SetABI(path string) error {
 	return nil
 }
 
-func (c *EthContract) Call(params string) ([]interface{}, error) {
+func (c *EthContract) Deploy(code []byte, params string, wallet wallet.Wallet) (string, error) {
+	method, args, err := helper.ParseParams(params)
+	if err != nil {
+		return "", err
+	}
+
+	if method != "" {
+		return "", errors.New("method must be empty for constructor")
+	}
+
+	parsed, err := abi.JSON(strings.NewReader(string(c.abi)))
+	if err != nil {
+		return "", err
+	}
+
+	data := make([]interface{}, 0)
+	if len(parsed.Constructor.Inputs) > 0 {
+		index := 0
+		for _, p := range parsed.Constructor.Inputs {
+			if len(args) <= index {
+				return "", errors.New("Not enough parameters")
+			}
+
+			if p.Type.Elem != nil {
+				var subdata interface{}
+
+				subdata, index, err = helper.Str2Array(args, index, p.Type)
+				if err != nil {
+					return "", err
+				}
+
+				data = append(data, subdata)
+			} else {
+				v, err := helper.Str2Type(args[index], p.Type.GetType())
+				if err != nil {
+					return "", err
+				}
+
+				data = append(data, v)
+				index++
+			}
+		}
+	}
+
+	opts, err := c.genTransOpts(wallet)
+	if err != nil {
+		return "", err
+	}
+
+	address, _, _, err := bind.DeployContract(opts, parsed, code, c.chain.(*chain.EthChain).Client, data...)
+	if err != nil {
+		return "", err
+	}
+
+	c.address = address
+	return address.Hex(), nil
+}
+
+func (c *EthContract) Call(params string, wallet wallet.Wallet) ([]interface{}, error) {
 	method, args, err := helper.ParseParams(params)
 	if err != nil {
 		return nil, err
@@ -110,7 +170,12 @@ func (c *EthContract) Call(params string) ([]interface{}, error) {
 			return nil, err
 		}
 	} else {
-		tx, err := c.client.Transact(nil, method, data...)
+		opts, err := c.genTransOpts(wallet)
+		if err != nil {
+			return nil, err
+		}
+
+		tx, err := c.client.Transact(opts, method, data...)
 		if err != nil {
 			return nil, err
 		}
@@ -261,4 +326,20 @@ func (c *EthContract) DecodeABI(method string, data []byte, withfunc bool) (stri
 
 	builder.WriteString(")")
 	return builder.String(), nil
+}
+
+func (c *EthContract) genTransOpts(wallet wallet.Wallet) (*bind.TransactOpts, error) {
+	key, err := crypto.ToECDSA(wallet.PrivateKey())
+	if err != nil {
+		return nil, err
+	}
+	opts, _ := bind.NewKeyedTransactorWithChainID(key, new(big.Int).SetUint64(c.chain.(*chain.EthChain).Id))
+
+	gas, err := c.chain.GasPrice()
+	if err != nil {
+		return nil, err
+	}
+
+	opts.GasPrice = &gas
+	return opts, nil
 }

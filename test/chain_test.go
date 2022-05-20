@@ -8,6 +8,8 @@ import (
 	"testing"
 	"utopia/internal/chain"
 	"utopia/internal/helper"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var (
@@ -91,7 +93,7 @@ func TestBlockByHash(t *testing.T) {
 	}
 	defer c.DisConnect()
 
-	b, err := c.BlockByHash(helper.Str2bytes(blockHash))
+	b, err := c.BlockByHash(common.FromHex(blockHash))
 	if b.Hash().Hex() != blockHash {
 		t.Errorf("Block by hash expect %s but %s", blockHash, b.Hash().Hex())
 	}
@@ -105,7 +107,12 @@ func TestTransaction(t *testing.T) {
 	}
 	defer c.DisConnect()
 
-	tx, _ := c.Transaction(helper.Str2bytes(txHash))
+	tx, _, err := c.Transaction(common.FromHex(txHash))
+	if err != nil {
+		t.Errorf("Find transaction failed with error: %v", err)
+		return
+	}
+
 	if tx.Hash().Hex() != txHash {
 		t.Errorf("Transaction expect %s but %s", txHash, tx.Hash().Hex())
 	}
@@ -119,7 +126,7 @@ func TestReceipt(t *testing.T) {
 	}
 	defer c.DisConnect()
 
-	r, err := c.Receipt(helper.Str2bytes(txHash))
+	r, err := c.Receipt(common.FromHex(txHash))
 	if r.TxHash.Hex() != txHash {
 		t.Errorf("Transaction expect %s but %s", txHash, r.TxHash.Hex())
 	}
@@ -144,12 +151,17 @@ func TestEstimateGas(t *testing.T) {
 	}
 	defer c.DisConnect()
 
-	tx, _ := c.Transaction(helper.Str2bytes(txHash))
+	tx, _, err := c.Transaction(common.FromHex(txHash))
+	if err != nil {
+		t.Errorf("Find transaction failed with error: %v", err)
+		return
+	}
+
 	if tx.Hash().Hex() != txHash {
 		t.Errorf("Transaction expect %s but %s", txHash, tx.Hash().Hex())
 	}
 
-	r, err := c.Receipt(helper.Str2bytes(txHash))
+	r, err := c.Receipt(common.FromHex(txHash))
 	if r.TxHash.Hex() != txHash {
 		t.Errorf("Transaction expect %s but %s", txHash, r.TxHash.Hex())
 	}

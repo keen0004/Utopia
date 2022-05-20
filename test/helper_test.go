@@ -4,10 +4,12 @@ import (
 	"math/big"
 	"testing"
 	"utopia/internal/helper"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func TestHelper(t *testing.T) {
-	data := helper.Str2bytes("0x1234567890abcdef")
+	data := common.FromHex("0x1234567890abcdef")
 	expect := []byte{18, 52, 86, 120, 144, 171, 205, 239}
 
 	if len(data) != len(expect) {
