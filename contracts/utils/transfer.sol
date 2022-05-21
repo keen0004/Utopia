@@ -14,11 +14,11 @@ contract Transfer is Ownable {
 
     receive() external payable {}
 
-    function getBalance() view public returns(uint256) {
+    function getBalance() view external returns(uint256) {
         return address(this).balance;
     }
 
-    function batchTransfer(address[] memory tolist, uint256[] memory values) public onlyOwner {
+    function batchTransfer(address[] memory tolist, uint256[] memory values) external onlyOwner {
         require(tolist.length == values.length, "tolist.length != values.length");
 
         uint256 balance = address(this).balance;
@@ -35,7 +35,7 @@ contract Transfer is Ownable {
         }
     }
 
-    function batchTransferToken(address token, address[] memory tolist, uint256[] memory values) public onlyOwner {
+    function batchTransferToken(address token, address[] memory tolist, uint256[] memory values) external onlyOwner {
         require(tolist.length == values.length, "tolist.length != values.length");
 
         IERC20 c = IERC20(token);
@@ -54,7 +54,7 @@ contract Transfer is Ownable {
         }
     }
 
-    function withdraw(address token, address to, uint256 value, bytes memory salt, bytes memory signature) public {
+    function withdraw(address token, address to, uint256 value, bytes memory salt, bytes memory signature) external {
         bytes32 hash = keccak256(abi.encode(token, to, value, salt));
         require(_txlist[hash] == false, "transaction has exist");
         require(ECDSA.recover(hash, signature) == owner(), "not owner signed transaction");
@@ -76,7 +76,7 @@ contract Transfer is Ownable {
         emit ewithdraw(token, to, value, salt);
     }
 
-    function discard(address token, address to, uint256 value, bytes memory salt, bytes memory signature) public {
+    function discard(address token, address to, uint256 value, bytes memory salt, bytes memory signature) external {
         bytes32 hash = keccak256(abi.encode(token, to, value, salt));
         require(ECDSA.recover(hash, signature) == owner(), "not owner signed transaction");
 

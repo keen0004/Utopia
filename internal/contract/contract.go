@@ -1,6 +1,9 @@
 package contract
 
-import "utopia/internal/wallet"
+import (
+	"math/big"
+	"utopia/internal/wallet"
+)
 
 const (
 	COMMON_CRONTACT = 1
@@ -15,6 +18,6 @@ type Contract interface {
 	SetABI(path string) error
 	EncodeABI(method string, data string, withfunc bool) ([]byte, error)
 	DecodeABI(method string, data []byte, withfunc bool) (string, error)
-	Deploy(code []byte, params string, wallet wallet.Wallet) (string, error)
-	Call(params string, wallet wallet.Wallet) ([]interface{}, error)
+	Deploy(code []byte, params string, wallet wallet.Wallet, value *big.Int) (string, error)
+	Call(params string, wallet wallet.Wallet, value *big.Int) ([]interface{}, error)
 }

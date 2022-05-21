@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"utopia/internal/excel"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -204,4 +205,73 @@ func Array2Str(input interface{}, totype reflect.Type) (string, error) {
 
 	builder.WriteString("]")
 	return builder.String(), nil
+}
+
+func ReadTransferFile(path string) ([]string, []string, error) {
+	to := make([]string, 0)
+	value := make([]string, 0)
+
+	file, err := excel.NewExcel(path)
+	if err != nil {
+		return to, value, err
+	}
+
+	err = file.Open()
+	if err != nil {
+		return to, value, err
+	}
+	defer file.Close(false)
+
+	data, err := file.ReadAll("transfer")
+	if err != nil {
+		return to, value, err
+	}
+
+	for index, row := range data {
+		// skip the header
+		if index == 0 {
+			continue
+		}
+
+		if len(row) != 3 {
+			return to, value, errors.New("Invalid file format")
+		}
+
+		to = append(to, row[1])
+		value = append(value, row[2])
+	}
+
+	return to, value, nil
+}
+
+func SaveTransferFile(to []string, value []string, path string) error {
+	if len(to) != len(value) {
+		return errors.New("Not match to and value")
+	}
+
+	file, err := excel.NewExcel(path)
+	if err != nil {
+		return err
+	}
+
+	err = file.Open()
+	if err != nil {
+		return err
+	}
+	defer file.Close(true)
+
+	data := make([][]string, 0)
+	header := []string{"index", "address", "value"}
+	data = append(data, header)
+
+	for i, key := range to {
+		row := make([]string, 0, 3)
+		row = append(row, strconv.Itoa(i+1))
+		row = append(row, key)
+		row = append(row, value[i])
+
+		data = append(data, row)
+	}
+
+	return file.WriteAll("transfer", data)
 }

@@ -19,6 +19,7 @@ const (
 	HECO_MAINNET     = 128
 	TLOS_MAINNET     = 40
 	DEV_NETWORK      = 12345
+	GANACHE_NETWORK  = 1337
 )
 
 type Chain interface {

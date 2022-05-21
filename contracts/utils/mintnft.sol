@@ -27,7 +27,7 @@ contract MintFactory {
         owner = msg.sender;
     }
 
-    function deploy(address ERC721, uint count) public payable {
+    function deploy(address ERC721, uint count) external payable {
         for (uint i=0; i<count; i++) {
             new ERC721Mint{value: 0.05 ether}(ERC721, owner);
         }

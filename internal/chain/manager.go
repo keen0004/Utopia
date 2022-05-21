@@ -2,9 +2,10 @@ package chain
 
 var (
 	ChainMap = map[uint64]func(uint64, string, string) Chain{
-		ETH_MAINNET: NewEthChain,
-		BSC_MAINNET: NewEthChain,
-		DEV_NETWORK: NewEthChain,
+		ETH_MAINNET:     NewEthChain,
+		BSC_MAINNET:     NewEthChain,
+		DEV_NETWORK:     NewEthChain,
+		GANACHE_NETWORK: NewEthChain,
 	}
 )
 

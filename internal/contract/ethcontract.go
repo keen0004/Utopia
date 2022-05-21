@@ -62,7 +62,7 @@ func (c *EthContract) SetABI(path string) error {
 	return nil
 }
 
-func (c *EthContract) Deploy(code []byte, params string, wallet wallet.Wallet) (string, error) {
+func (c *EthContract) Deploy(code []byte, params string, wallet wallet.Wallet, value *big.Int) (string, error) {
 	method, args, err := helper.ParseParams(params)
 	if err != nil {
 		return "", err
@@ -106,7 +106,7 @@ func (c *EthContract) Deploy(code []byte, params string, wallet wallet.Wallet) (
 		}
 	}
 
-	opts, err := c.genTransOpts(wallet)
+	opts, err := c.chain.(*chain.EthChain).GenTransOpts(wallet, value)
 	if err != nil {
 		return "", err
 	}
@@ -120,7 +120,7 @@ func (c *EthContract) Deploy(code []byte, params string, wallet wallet.Wallet) (
 	return address.Hex(), nil
 }
 
-func (c *EthContract) Call(params string, wallet wallet.Wallet) ([]interface{}, error) {
+func (c *EthContract) Call(params string, wallet wallet.Wallet, value *big.Int) ([]interface{}, error) {
 	method, args, err := helper.ParseParams(params)
 	if err != nil {
 		return nil, err
@@ -170,7 +170,7 @@ func (c *EthContract) Call(params string, wallet wallet.Wallet) ([]interface{}, 
 			return nil, err
 		}
 	} else {
-		opts, err := c.genTransOpts(wallet)
+		opts, err := c.chain.(*chain.EthChain).GenTransOpts(wallet, value)
 		if err != nil {
 			return nil, err
 		}
@@ -181,7 +181,7 @@ func (c *EthContract) Call(params string, wallet wallet.Wallet) ([]interface{}, 
 		}
 
 		result = make([]interface{}, 0)
-		result = append(result, tx.Hash())
+		result = append(result, tx.Hash().Hex())
 	}
 
 	return result, nil
@@ -326,20 +326,4 @@ func (c *EthContract) DecodeABI(method string, data []byte, withfunc bool) (stri
 
 	builder.WriteString(")")
 	return builder.String(), nil
-}
-
-func (c *EthContract) genTransOpts(wallet wallet.Wallet) (*bind.TransactOpts, error) {
-	key, err := crypto.ToECDSA(wallet.PrivateKey())
-	if err != nil {
-		return nil, err
-	}
-	opts, _ := bind.NewKeyedTransactorWithChainID(key, new(big.Int).SetUint64(c.chain.(*chain.EthChain).Id))
-
-	gas, err := c.chain.GasPrice()
-	if err != nil {
-		return nil, err
-	}
-
-	opts.GasPrice = &gas
-	return opts, nil
 }

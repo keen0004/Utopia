@@ -7,6 +7,7 @@ import (
 	"utopia/internal/wallet"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -326,4 +327,20 @@ func (chain *EthChain) refresh() error {
 	}
 
 	return errors.New("Can not connect any server")
+}
+
+func (c *EthChain) GenTransOpts(wallet wallet.Wallet, value *big.Int) (*bind.TransactOpts, error) {
+	key, err := crypto.ToECDSA(wallet.PrivateKey())
+	if err != nil {
+		return nil, err
+	}
+	opts, _ := bind.NewKeyedTransactorWithChainID(key, new(big.Int).SetUint64(c.Id))
+
+	opts.GasPrice, err = c.Client.SuggestGasPrice(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	opts.Value = value
+	return opts, nil
 }
