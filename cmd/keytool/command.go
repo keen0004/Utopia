@@ -10,6 +10,7 @@ import (
 	"sync"
 	"utopia/internal/config"
 	"utopia/internal/excel"
+	"utopia/internal/helper"
 	"utopia/internal/logger"
 	"utopia/internal/wallet"
 
@@ -359,11 +360,11 @@ func writeExcel(path string, data []wallet.Wallet) error {
 	for i, key := range data {
 		row := make([]string, 0, 3)
 		row = append(row, strconv.Itoa(i+1))
-		row = append(row, key.Address())
-		row = append(row, key.PrivateKey())
-		row = append(row, key.FilePath())
-		row = append(row, key.Password())
-		row = append(row, "")
+		row = append(row, helper.DefaultVlue(key.Address(), "0x"))
+		row = append(row, helper.DefaultVlue(key.PrivateKey(), "0x"))
+		row = append(row, helper.DefaultVlue(key.FilePath(), "x"))
+		row = append(row, helper.DefaultVlue(key.Password(), "x"))
+		row = append(row, "x")
 
 		values = append(values, row)
 	}

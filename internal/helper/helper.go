@@ -55,6 +55,14 @@ func EthToWei(eth float32) *big.Int {
 	return wei
 }
 
+func DefaultVlue(value string, def string) string {
+	if value == "" {
+		return def
+	}
+
+	return value
+}
+
 // parse function sig and call data
 func ParseParams(params string) (string, []string, error) {
 	params = strings.Trim(params, " ")
@@ -307,10 +315,10 @@ func SaveTransferFile(info []TransferInfo, path string) error {
 	for i, key := range info {
 		row := make([]string, 0, len(TRANSFER_LIST_HEADER))
 		row = append(row, strconv.Itoa(i+1))
-		row = append(row, key.From)
-		row = append(row, key.To)
-		row = append(row, key.Value)
-		row = append(row, key.Notes)
+		row = append(row, DefaultVlue(key.From, "0x"))
+		row = append(row, DefaultVlue(key.To, "0x"))
+		row = append(row, DefaultVlue(key.Value, "0"))
+		row = append(row, DefaultVlue(key.Notes, "x"))
 
 		data = append(data, row)
 	}

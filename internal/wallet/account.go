@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"utopia/internal/excel"
+	"utopia/internal/helper"
 )
 
 var (
@@ -104,11 +105,11 @@ func SaveAccountList(path string) error {
 	for address, wallet := range AccountList {
 		row := make([]string, 0, len(ACCOUNT_LIST_HEADER))
 		row = append(row, strconv.Itoa(index))
-		row = append(row, address)
-		row = append(row, wallet.PrivateKey())
-		row = append(row, wallet.FilePath())
-		row = append(row, wallet.Password())
-		row = append(row, "")
+		row = append(row, helper.DefaultVlue(address, "0x"))
+		row = append(row, helper.DefaultVlue(wallet.PrivateKey(), "0x"))
+		row = append(row, helper.DefaultVlue(wallet.FilePath(), "x"))
+		row = append(row, helper.DefaultVlue(wallet.Password(), "x"))
+		row = append(row, "x")
 
 		data = append(data, row)
 		index++
