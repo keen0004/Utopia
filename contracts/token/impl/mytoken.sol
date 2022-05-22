@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-// address: 0x64838E35E7f0e7815B572abb02cDf053E6a6ac4C
 contract MyToken is ERC20 {
     uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** 18;
     uint256 public constant PRICE = 0.01 ether;
