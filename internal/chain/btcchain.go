@@ -37,12 +37,12 @@ func (chain *BtcChain) DisConnect() {
 
 }
 
-func (chain *BtcChain) ChainId() (big.Int, error) {
-	return *big.NewInt(0), nil
+func (chain *BtcChain) ChainId() (*big.Int, error) {
+	return big.NewInt(0), nil
 }
 
-func (chain *BtcChain) GasPrice() (big.Int, error) {
-	return *big.NewInt(0), nil
+func (chain *BtcChain) GasPrice() (*big.Int, error) {
+	return big.NewInt(0), nil
 }
 
 func (chain *BtcChain) BlockNumber() (uint64, error) {
@@ -65,26 +65,26 @@ func (chain *BtcChain) Receipt(hash []byte) (*types.Receipt, error) {
 	return nil, nil
 }
 
-func (chain *BtcChain) SendTransaction(tx *types.Transaction, wallet wallet.Wallet) error {
-	return nil
+func (chain *BtcChain) SendTransaction(tx *types.Transaction, wallet wallet.Wallet) (string, error) {
+	return "", nil
 }
 
 func (chain *BtcChain) EstimateGas(tx *types.Transaction) (uint64, error) {
 	return 0, nil
 }
 
-func (chain *BtcChain) Balance(address string) (big.Int, error) {
-	return *big.NewInt(0), nil
+func (chain *BtcChain) Balance(address string) (*big.Int, error) {
+	return big.NewInt(0), nil
 }
 
-func (chain *BtcChain) Transfer(to []string, value []*big.Int, wallet wallet.Wallet) error {
-	return nil
+func (chain *BtcChain) Transfer(to string, value *big.Int, wallet wallet.Wallet) (string, error) {
+	return "", nil
 }
 
 func (chain *BtcChain) Nonce(address string) (uint64, error) {
 	return 0, nil
 }
 
-func (chain *BtcChain) Code(address string) ([]byte, error) {
-	return []byte{}, nil
+func (chain *BtcChain) Code(address string) (string, error) {
+	return "", nil
 }

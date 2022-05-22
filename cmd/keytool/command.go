@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"path"
 	"strconv"
 	"sync"
+	"utopia/internal/config"
 	"utopia/internal/excel"
 	"utopia/internal/logger"
 	"utopia/internal/wallet"
@@ -96,9 +96,6 @@ var (
 		Usage:  "sign message by private key",
 		Action: SignMessage,
 		Flags: []cli.Flag{
-			KeyFlag,
-			KeyStoreFlag,
-			PasswordFlag,
 			DataFlag,
 		},
 	}
@@ -228,55 +225,36 @@ func ListKey(ctx *cli.Context) error {
 			return err
 		}
 
-		fmt.Fprintf(os.Stderr, "key %d: Address = %s, Private = %s\n", 1, wallet.Address(), hex.EncodeToString(wallet.PrivateKey()))
+		fmt.Fprintf(os.Stderr, "key %d: Address = %s, Private = %s\n", 1, wallet.Address(), wallet.PrivateKey())
+	} else {
+		wallet, err := wallet.ListWallet(wallet.WALLET_ETH, keydir, password)
+		if err != nil {
+			return err
+		}
 
-		return nil
-	}
-
-	wallet, err := wallet.ListWallet(wallet.WALLET_ETH, keydir, password)
-	if err != nil {
-		return err
-	}
-
-	for index, w := range wallet {
-		fmt.Fprintf(os.Stderr, "key %d: Address = %s, Private = %s\n", index+1, w.Address(), hex.EncodeToString(w.PrivateKey()))
+		for index, w := range wallet {
+			fmt.Fprintf(os.Stderr, "key %d: Address = %s, Private = %s\n", index+1, w.Address(), w.PrivateKey())
+		}
 	}
 
 	return nil
 }
 
 func SignMessage(ctx *cli.Context) error {
-	key := ctx.String(KeyFlag.Name)
-	keyfile := ctx.String(KeyStoreFlag.Name)
-	password := ctx.String(PasswordFlag.Name)
 	data := ctx.String(DataFlag.Name)
-
-	if data == "" || (key == "" && keyfile == "") || (keyfile != "" && password == "") {
+	if data == "" {
 		return errors.New("Invalid parameters for sign data")
 	}
 
-	// read private key
-	var err error
-	var privatekey *ecdsa.PrivateKey
-
-	if key != "" {
-		privatekey, err = crypto.ToECDSA(common.FromHex(key))
-		if err != nil {
-			return err
-		}
-	} else {
-		wallet := wallet.NewWallet(wallet.WALLET_ETH, keyfile, password)
-
-		err = wallet.LoadKey()
-		if err != nil {
-			return err
-		}
-
-		privatekey, _ = crypto.ToECDSA(wallet.PrivateKey())
+	// load configs
+	w, err := wallet.GetWallet(config.Config.From)
+	if err != nil {
+		return err
 	}
 
 	// sign data
-	sign, err := crypto.Sign(crypto.Keccak256(common.FromHex(data)), privatekey)
+	key, _ := crypto.ToECDSA(common.FromHex(w.PrivateKey()))
+	sign, err := crypto.Sign(crypto.Keccak256(common.FromHex(data)), key)
 	if err != nil {
 		return err
 	}
@@ -300,11 +278,13 @@ func VerifySig(ctx *cli.Context) error {
 		hash = crypto.Keccak256(common.FromHex(data))
 	}
 
+	// recover public key from signature
 	recoveredPubkey, err := crypto.SigToPub(hash, common.FromHex(sign))
 	if err != nil {
 		return err
 	}
 
+	// calculate the address from public key
 	address := crypto.PubkeyToAddress(*recoveredPubkey)
 	fmt.Fprintf(os.Stderr, "Data signed by address: %s\n", address.Hex())
 
@@ -325,8 +305,7 @@ func HashData(ctx *cli.Context) error {
 	// h.Write(common.FromHex(data))
 	// hash = h.Sum(hash)
 
-	fmt.Fprintf(os.Stderr, "Hash result: 0x%s\n", hex.EncodeToString(hash))
-
+	fmt.Fprintf(os.Stderr, "Hash result: 0x%s\n", common.Bytes2Hex(hash))
 	return nil
 }
 
@@ -336,6 +315,7 @@ func batchGenKey(start int, dir string, size int, password string, bar *pb.Progr
 	for i := 0; i < size; i++ {
 		wallet := wallet.NewWallet(wallet.WALLET_ETH, path.Join(dir, fmt.Sprintf("key_%d", start+i)), password)
 
+		// generate new wallet
 		err := wallet.GenerateKey()
 		if err != nil {
 			logger.Error("generate key_%d error %v", start+i, err)
@@ -344,6 +324,7 @@ func batchGenKey(start int, dir string, size int, password string, bar *pb.Progr
 			continue
 		}
 
+		// save key data to file
 		err = wallet.SaveKey()
 		if err != nil {
 			logger.Error("save key_%d error %v", start+i, err)
@@ -371,20 +352,24 @@ func writeExcel(path string, data []wallet.Wallet) error {
 	}
 	defer excel.Close(true)
 
+	// generate write data
 	values := make([][]string, 0)
-	header := []string{"index", "address", "private"}
-	values = append(values, header)
+	values = append(values, wallet.ACCOUNT_LIST_HEADER)
 
 	for i, key := range data {
 		row := make([]string, 0, 3)
 		row = append(row, strconv.Itoa(i+1))
 		row = append(row, key.Address())
-		row = append(row, hex.EncodeToString(key.PrivateKey()))
+		row = append(row, key.PrivateKey())
+		row = append(row, key.FilePath())
+		row = append(row, key.Password())
+		row = append(row, "")
 
 		values = append(values, row)
 	}
 
-	err = excel.WriteAll("keys", values)
+	// write excel data
+	err = excel.WriteAll(wallet.ACCOUNTS_SHEET_NAME, values)
 	if err != nil {
 		return err
 	}

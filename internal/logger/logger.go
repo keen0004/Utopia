@@ -26,6 +26,7 @@ var (
 	defaultPath = "./utopia.log"
 )
 
+// init log handler
 func init() {
 	logfile = os.Stderr
 	debugLogger = log.New(logfile, PDEBUG, LOGFLAGS)
@@ -54,6 +55,7 @@ func Error(format string, v ...interface{}) {
 	errorLogger.Printf(fmt.Sprintf("%s:%d %s", path.Base(file), line, format), v...)
 }
 
+// reset the log file path
 func SetLogPath(path string) {
 	if path == "" {
 		path = defaultPath

@@ -235,7 +235,7 @@ func TestMeta(t *testing.T) {
 	}
 	defer os.Remove(path)
 
-	err = chain.ReloadChainList(path)
+	err = chain.LoadChainList(path)
 	if err != nil {
 		t.Errorf("Load chain meta info failed with err %v", err)
 		return

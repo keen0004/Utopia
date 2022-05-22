@@ -3,7 +3,6 @@ package wallet
 import (
 	"errors"
 	"io/ioutil"
-	"math/big"
 	"os"
 	"strings"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// etherum wallet type
 type EthWallet struct {
 	path     string
 	password string
@@ -23,32 +23,62 @@ func NewEthWallet(path string, password string) Wallet {
 	return &EthWallet{path: path, password: password, key: nil}
 }
 
+// return wallet address in hex mode
 func (w *EthWallet) Address() string {
 	if w.key == nil {
-		return common.BigToAddress(big.NewInt(0)).Hex()
+		return common.BigToAddress(common.Big0).Hex()
 	}
 
 	return w.key.Address.Hex()
 }
 
-func (w *EthWallet) PrivateKey() []byte {
+func (w *EthWallet) PrivateKey() string {
 	if w.key == nil {
-		return []byte{}
+		return ""
 	}
 
-	return crypto.FromECDSA(w.key.PrivateKey)
+	return "0x" + common.Bytes2Hex(crypto.FromECDSA(w.key.PrivateKey))
 }
 
-func (w *EthWallet) PublicKey() []byte {
+func (w *EthWallet) PublicKey() string {
 	if w.key == nil {
-		return nil
+		return ""
 	}
 
-	return crypto.FromECDSAPub(&w.key.PrivateKey.PublicKey)
+	return "0x" + common.Bytes2Hex(crypto.FromECDSAPub(&w.key.PrivateKey.PublicKey))
 }
 
+func (w *EthWallet) FilePath() string {
+	return w.path
+}
+
+func (w *EthWallet) Password() string {
+	return w.password
+}
+
+// generate key for wallet
 func (w *EthWallet) GenerateKey() error {
 	privateKey, err := crypto.GenerateKey()
+	if err != nil {
+		return err
+	}
+
+	UUID, err := uuid.NewRandom()
+	if err != nil {
+		return err
+	}
+
+	w.key = &keystore.Key{
+		Id:         UUID,
+		Address:    crypto.PubkeyToAddress(privateKey.PublicKey),
+		PrivateKey: privateKey,
+	}
+
+	return nil
+}
+
+func (w *EthWallet) SetPrivateKey(key string) error {
+	privateKey, err := crypto.ToECDSA(common.FromHex(key))
 	if err != nil {
 		return err
 	}
@@ -73,12 +103,10 @@ func (w *EthWallet) SaveKey() error {
 	}
 
 	if w.key == nil {
-		err := w.GenerateKey()
-		if err != nil {
-			return err
-		}
+		return errors.New("Not set the private key for wallet")
 	}
 
+	// encrypt private key to keystore
 	keyjson, err := keystore.EncryptKey(w.key, w.password, keystore.StandardScryptN, keystore.StandardScryptP)
 	if err != nil {
 		return err
@@ -93,6 +121,10 @@ func (w *EthWallet) SaveKey() error {
 }
 
 func (w *EthWallet) LoadKey() error {
+	if w.path == "" {
+		return errors.New("Not set the key file path")
+	}
+
 	keyjson, err := ioutil.ReadFile(w.path)
 	if err != nil {
 		return err

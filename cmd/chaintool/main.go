@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"utopia/internal/config"
 	"utopia/internal/helper"
 
 	"gopkg.in/urfave/cli.v1"
@@ -19,7 +20,6 @@ func init() {
 	app.Commands = []cli.Command{
 		cmdBalance,
 		cmdTransfer,
-		cmdMerge,
 		cmdSpeedup,
 		cmdRpcServer,
 		cmdGas,
@@ -27,7 +27,13 @@ func init() {
 }
 
 func main() {
-	err := app.Run(os.Args)
+	err := config.Config.LoadConfig("")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	err = app.Run(os.Args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

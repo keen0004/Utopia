@@ -22,12 +22,13 @@ const (
 	GANACHE_NETWORK  = 1337
 )
 
+// chain interface
 type Chain interface {
 	Connect(rpc []string, checkid bool) error
 	DisConnect()
 
-	ChainId() (big.Int, error)
-	GasPrice() (big.Int, error)
+	ChainId() (*big.Int, error)
+	GasPrice() (*big.Int, error)
 
 	BlockNumber() (uint64, error)
 	BlockByNumber(number uint64) (*types.Block, error)
@@ -35,11 +36,11 @@ type Chain interface {
 
 	Transaction(hash []byte) (*types.Transaction, bool, error)
 	Receipt(hash []byte) (*types.Receipt, error)
-	SendTransaction(tx *types.Transaction, wallet wallet.Wallet) error
+	SendTransaction(tx *types.Transaction, wallet wallet.Wallet) (string, error)
 	EstimateGas(tx *types.Transaction) (uint64, error)
 
-	Balance(address string) (big.Int, error)
-	Transfer(to []string, value []*big.Int, wallet wallet.Wallet) error
+	Balance(address string) (*big.Int, error)
+	Transfer(to string, value *big.Int, wallet wallet.Wallet) (string, error)
 	Nonce(address string) (uint64, error)
-	Code(address string) ([]byte, error)
+	Code(address string) (string, error)
 }

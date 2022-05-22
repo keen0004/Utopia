@@ -4,44 +4,28 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"strconv"
-	"strings"
 	"time"
 	"utopia/internal/chain"
+	"utopia/internal/config"
 	"utopia/internal/helper"
-	"utopia/internal/logger"
 	"utopia/internal/wallet"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
 	"gopkg.in/urfave/cli.v1"
 )
 
 var (
+	ChainFlag = cli.StringFlag{
+		Name:  "chain",
+		Usage: "Chain name",
+		Value: "",
+	}
 	AddressFlag = cli.StringFlag{
 		Name:  "address",
 		Usage: "Address in hex mode",
-		Value: "",
-	}
-	ChainFlag = cli.StringFlag{
-		Name:  "chain",
-		Usage: "Chain name (ie: btc, eth, bsc)",
-		Value: "",
-	}
-	KeyFlag = cli.StringFlag{
-		Name:  "key",
-		Usage: "The file path of key store ",
-		Value: "",
-	}
-	KeyDirFlag = cli.StringFlag{
-		Name:  "keydir",
-		Usage: "The directory of key store",
-		Value: "",
-	}
-	PasswordFlag = cli.StringFlag{
-		Name:  "password",
-		Usage: "The password of key store",
 		Value: "",
 	}
 	ToFlag = cli.StringFlag{
@@ -75,10 +59,7 @@ var (
 		Usage:  "Query balance of accounts on chain",
 		Action: QueryBalance,
 		Flags: []cli.Flag{
-			ChainFlag,
 			AddressFlag,
-			KeyDirFlag,
-			PasswordFlag,
 		},
 	}
 	cmdTransfer = cli.Command{
@@ -86,23 +67,9 @@ var (
 		Usage:  "Transfer balance of accounts on chain",
 		Action: TransferBalance,
 		Flags: []cli.Flag{
-			ChainFlag,
-			KeyFlag,
-			PasswordFlag,
 			ToFlag,
 			ValueFlag,
 			FileFlag,
-		},
-	}
-	cmdMerge = cli.Command{
-		Name:   "merge",
-		Usage:  "Merge balance of accounts on chain",
-		Action: MergeBalance,
-		Flags: []cli.Flag{
-			ChainFlag,
-			KeyDirFlag,
-			PasswordFlag,
-			ToFlag,
 		},
 	}
 	cmdSpeedup = cli.Command{
@@ -110,9 +77,6 @@ var (
 		Usage:  "Speedup transaction on chain",
 		Action: Speedup,
 		Flags: []cli.Flag{
-			ChainFlag,
-			KeyFlag,
-			PasswordFlag,
 			HashFlag,
 			GasPriceFlag,
 		},
@@ -136,208 +100,102 @@ var (
 )
 
 func QueryBalance(ctx *cli.Context) error {
-	chainName := ctx.String(ChainFlag.Name)
 	address := ctx.String(AddressFlag.Name)
-	keydir := ctx.String(KeyDirFlag.Name)
-	password := ctx.String(PasswordFlag.Name)
 
-	meta, err := chain.ChainMetaByName(chainName)
+	// get chain meta and connect it
+	meta, err := chain.ChainMetaByName(config.Config.Network)
 	if err != nil {
 		return err
 	}
 
-	addressList := make([]string, 0)
-	if address != "" {
-		addressList = append(addressList, strings.Split(address, ",")...)
-	}
-
-	if keydir != "" && password != "" {
-		wallet, err := wallet.ListWallet(wallet.WALLET_ETH, keydir, password)
-		if err != nil {
-			return err
-		}
-
-		for _, w := range wallet {
-			addressList = append(addressList, w.Address())
-		}
-	}
-
-	logger.Debug("Total address is %d", len(addressList))
-
-	chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
-	if chain == nil {
+	c := chain.NewChain(meta.Id, meta.Currency, meta.Name)
+	if c == nil {
 		return errors.New("Connect chain failed")
 	}
-	defer chain.DisConnect()
+	defer c.DisConnect()
 
-	for _, addr := range addressList {
-		balance, err := chain.Balance(addr)
-		if err != nil {
-			logger.Warn("Address[%s].balance=%d, error:%v", addr, 0, err)
-			continue
-		}
-
-		fmt.Printf("Address[%s].balance=%f\n", addr, helper.WeiToEth(&balance))
+	balance, err := c.Balance(address)
+	if err != nil {
+		return err
 	}
 
+	fmt.Printf("Address[%s].balance=%f\n", address, helper.WeiToEth(balance))
 	return nil
 }
 
 func TransferBalance(ctx *cli.Context) error {
-	chainName := ctx.String(ChainFlag.Name)
-	key := ctx.String(KeyFlag.Name)
-	password := ctx.String(PasswordFlag.Name)
 	to := ctx.String(ToFlag.Name)
 	value := ctx.String(ValueFlag.Name)
 	file := ctx.String(FileFlag.Name)
 
-	meta, err := chain.ChainMetaByName(chainName)
-	if err != nil {
-		return err
+	translist := make([]helper.TransferInfo, 0)
+	if to != "" && value != "" {
+		translist = append(translist, helper.TransferInfo{
+			From:  config.Config.From,
+			To:    to,
+			Value: value,
+		})
 	}
 
-	addresss := strings.Split(to, ",")
-	values := strings.Split(value, ",")
-	if len(addresss) != len(values) {
-		return errors.New("Not match the address and value list")
-	}
-
+	// read file transfer list
 	if file != "" {
-		alist, vlist, err := helper.ReadTransferFile(file)
+		list, err := helper.ReadTransferFile(file)
 		if err != nil {
 			return err
 		}
 
-		addresss = append(addresss, alist...)
-		values = append(values, vlist...)
+		translist = append(translist, list...)
 	}
 
-	logger.Debug("Total address is %d", len(addresss))
-
-	wallet := wallet.NewWallet(wallet.WALLET_ETH, key, password)
-	err = wallet.LoadKey()
+	// get chain meta and connect it
+	meta, err := chain.ChainMetaByName(config.Config.Network)
 	if err != nil {
 		return err
 	}
 
-	chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
-	if chain == nil {
+	c := chain.NewChain(meta.Id, meta.Currency, meta.Name)
+	if c == nil {
 		return errors.New("Connect chain failed")
 	}
-	defer chain.DisConnect()
+	defer c.DisConnect()
 
-	total := new(big.Int)
-	valueList := make([]*big.Int, 0)
-	for _, v := range values {
-		fv, _ := strconv.ParseFloat(v, 64)
-		valueList = append(valueList, helper.EthToWei(float32(fv)))
-		total = new(big.Int).Add(total, helper.EthToWei(float32(fv)))
-	}
-
-	err = chain.Transfer(addresss, valueList, wallet)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Total transfer value %f\n", helper.WeiToEth(total))
-	return nil
-}
-
-func MergeBalance(ctx *cli.Context) error {
-	chainName := ctx.String(ChainFlag.Name)
-	keydir := ctx.String(KeyDirFlag.Name)
-	password := ctx.String(PasswordFlag.Name)
-	to := ctx.String(ToFlag.Name)
-
-	meta, err := chain.ChainMetaByName(chainName)
-	if err != nil {
-		return err
-	}
-
-	wallet, err := wallet.ListWallet(wallet.WALLET_ETH, keydir, password)
-	if err != nil {
-		return err
-	}
-
-	logger.Debug("Total merge number is %d", len(wallet))
-
-	chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
-	if chain == nil {
-		return errors.New("Connect chain failed")
-	}
-	defer chain.DisConnect()
-
-	gasprice, err := chain.GasPrice()
-	if err != nil {
-		return err
-	}
-
-	toList := make([]string, 0)
-	valueList := make([]string, 0)
-
-	total := new(big.Int)
-	for _, w := range wallet {
-		if w.Address() == to {
-			continue
-		}
-
-		balance, err := chain.Balance(w.Address())
+	for _, info := range translist {
+		// get wallet for sign transaction
+		wallet, err := wallet.GetWallet(info.From)
 		if err != nil {
-			log.Warn("Merge balance on address %s", w.Address())
-			continue
+			return err
 		}
 
-		fee := new(big.Int).Mul(&gasprice, big.NewInt(31500)) // 31500 = 21000 * 1.5
-		if fee.Cmp(&balance) >= 0 {
-			continue
-		}
-
-		value := new(big.Int).Sub(&balance, fee)
-		err = chain.Transfer([]string{to}, []*big.Int{value}, w)
+		fv, _ := strconv.ParseFloat(info.Value, 64)
+		tx, err := c.Transfer(info.To, helper.EthToWei(float32(fv)), wallet)
 		if err != nil {
-			log.Warn("Merge balance on address %s", w.Address())
-			continue
+			fmt.Fprintf(os.Stderr, "Tranfer %s to %s failed with err: %v\n", info.Value, info.To, err)
+		} else {
+			fmt.Fprintf(os.Stderr, "Tranfer %s to %s with transaction %s\n", info.Value, info.To, tx)
 		}
-
-		total = new(big.Int).Add(total, value)
-		toList = append(toList, w.Address())
-		valueList = append(valueList, strconv.FormatFloat(float64(helper.WeiToEth(value)), 'f', 5, 32))
 	}
 
-	err = helper.SaveTransferFile(toList, valueList, "./transfer.xlsx")
-	if err != nil {
-		log.Warn("Write transfer log failed with %v", err)
-	}
-
-	fmt.Printf("Total merge balance %f\n", helper.WeiToEth(total))
 	return nil
 }
 
 func Speedup(ctx *cli.Context) error {
-	chainName := ctx.String(ChainFlag.Name)
-	key := ctx.String(KeyFlag.Name)
-	password := ctx.String(PasswordFlag.Name)
 	gas := ctx.Uint64(GasPriceFlag.Name)
 	hash := ctx.String(HashFlag.Name)
 
-	meta, err := chain.ChainMetaByName(chainName)
+	// get chain meta and connect it
+	meta, err := chain.ChainMetaByName(config.Config.Network)
 	if err != nil {
 		return err
 	}
 
-	wallet := wallet.NewWallet(wallet.WALLET_ETH, key, password)
-	err = wallet.LoadKey()
-	if err != nil {
-		return err
-	}
-
-	chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
-	if chain == nil {
+	c := chain.NewChain(meta.Id, meta.Currency, meta.Name)
+	if c == nil {
 		return errors.New("Connect chain failed")
 	}
-	defer chain.DisConnect()
+	defer c.DisConnect()
 
-	gasprice, err := chain.GasPrice()
+	// query current gasprice on chain
+	gasprice, err := c.GasPrice()
 	if err != nil {
 		return err
 	}
@@ -347,11 +205,11 @@ func Speedup(ctx *cli.Context) error {
 			return errors.New("Input gas price is less")
 		}
 
-		gasprice = *new(big.Int).SetUint64(gas)
+		gasprice = new(big.Int).SetUint64(gas)
 	}
 
 	// query pending tx
-	tx, pending, err := chain.Transaction(common.FromHex(hash))
+	tx, pending, err := c.Transaction(common.FromHex(hash))
 	if err != nil {
 		return err
 	}
@@ -364,7 +222,14 @@ func Speedup(ctx *cli.Context) error {
 		return errors.New("Input gas less than transaction gas")
 	}
 
-	err = chain.SendTransaction(types.NewTransaction(tx.Nonce(), *tx.To(), tx.Value(), tx.Gas(), &gasprice, tx.Data()), wallet)
+	// get wallet for sign transaction
+	wallet, err := wallet.GetWallet(config.Config.From)
+	if err != nil {
+		return err
+	}
+
+	// resend transaction with higher gas
+	hash, err = c.SendTransaction(types.NewTransaction(tx.Nonce(), *tx.To(), tx.Value(), tx.Gas(), gasprice, tx.Data()), wallet)
 	if err != nil {
 		return err
 	}
@@ -392,6 +257,7 @@ func ListRpc(ctx *cli.Context) error {
 		return errors.New("Empty chain list")
 	}
 
+	// ping all rpc server
 	for _, meta := range metaList {
 		chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
 		if chain == nil {
@@ -434,6 +300,7 @@ func QueryGas(ctx *cli.Context) error {
 		return errors.New("Empty chain list")
 	}
 
+	// query gas from all chains
 	for _, meta := range metaList {
 		chain := chain.NewChain(meta.Id, meta.Currency, meta.Name)
 		if chain == nil {

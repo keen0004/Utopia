@@ -1,6 +1,7 @@
 package network
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -52,7 +53,7 @@ func HttpGet(url string, params []string, header map[string]string) ([]byte, err
 }
 
 func HttpPost(url string, data []byte, header map[string]string) ([]byte, error) {
-	req, err := http.NewRequest("POST", url, nil)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}

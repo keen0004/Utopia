@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"os"
 )
 
 type ChainMeta struct {
@@ -17,30 +16,12 @@ type ChainMeta struct {
 }
 
 var (
-	ChainList       []ChainMeta
-	ChainIdMap      map[uint64]int
-	ChainNameMap    map[string]int
-	ChainListConfig = "./chainlist.json"
+	ChainList    = make([]ChainMeta, 0)
+	ChainIdMap   = make(map[uint64]int)
+	ChainNameMap = make(map[string]int)
 )
 
-func init() {
-	ChainList = make([]ChainMeta, 0)
-	ChainIdMap = make(map[uint64]int)
-	ChainNameMap = make(map[string]int)
-
-	_, err := os.Stat(ChainListConfig)
-	if err != nil {
-		return
-	}
-
-	err = ReloadChainList(ChainListConfig)
-	if err != nil {
-		return
-	}
-
-	return
-}
-
+// get chain meta by chain id
 func ChainMetaById(id uint64) (*ChainMeta, error) {
 	index, ok := ChainIdMap[id]
 	if !ok {
@@ -50,6 +31,7 @@ func ChainMetaById(id uint64) (*ChainMeta, error) {
 	return &ChainList[index], nil
 }
 
+// get chain meta by chain name
 func ChainMetaByName(name string) (*ChainMeta, error) {
 	index, ok := ChainNameMap[name]
 	if !ok {
@@ -59,6 +41,7 @@ func ChainMetaByName(name string) (*ChainMeta, error) {
 	return &ChainList[index], nil
 }
 
+// add a new chain to meta list
 func AddChainMeta(id uint64, name string, currency string, isTest bool, server []string, explorer string) error {
 	_, ok := ChainIdMap[id]
 	if ok {
@@ -85,7 +68,8 @@ func AddChainMeta(id uint64, name string, currency string, isTest bool, server [
 	return nil
 }
 
-func ReloadChainList(path string) error {
+// load chain meta list from file
+func LoadChainList(path string) error {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
@@ -104,6 +88,7 @@ func ReloadChainList(path string) error {
 	return nil
 }
 
+// save current chain meta list to file
 func SaveChainList(path string) error {
 	data, err := json.MarshalIndent(ChainList, "", "    ")
 	if err != nil {

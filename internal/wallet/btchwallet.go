@@ -15,15 +15,27 @@ func (w *BtcWallet) Address() string {
 	return ""
 }
 
-func (w *BtcWallet) PrivateKey() []byte {
-	return []byte{}
+func (w *BtcWallet) PrivateKey() string {
+	return ""
 }
 
-func (w *BtcWallet) PublicKey() []byte {
-	return []byte{}
+func (w *BtcWallet) PublicKey() string {
+	return ""
+}
+
+func (w *BtcWallet) FilePath() string {
+	return w.path
+}
+
+func (w *BtcWallet) Password() string {
+	return w.password
 }
 
 func (w *BtcWallet) GenerateKey() error {
+	return nil
+}
+
+func (w *BtcWallet) SetPrivateKey(key string) error {
 	return nil
 }
 

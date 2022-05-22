@@ -11,13 +11,14 @@ const (
 	ERC721_CONTRACT = 3
 )
 
+// contract interface
 type Contract interface {
 	Address() string
-	Code() ([]byte, error)
+	Code() (string, error)
 	ABI() string
 	SetABI(path string) error
-	EncodeABI(method string, data string, withfunc bool) ([]byte, error)
-	DecodeABI(method string, data []byte, withfunc bool) (string, error)
-	Deploy(code []byte, params string, wallet wallet.Wallet, value *big.Int) (string, error)
+	EncodeABI(method string, data string, withfunc bool) (string, error)
+	DecodeABI(method string, data string, withfunc bool) (string, error)
+	Deploy(code string, params string, wallet wallet.Wallet, value *big.Int) (string, error)
 	Call(params string, wallet wallet.Wallet, value *big.Int) ([]interface{}, error)
 }

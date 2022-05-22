@@ -112,5 +112,25 @@
             "https://api.kainosbp.com/evm"
         ],
         "Explorer": "https://telos.eosauthority.com/"
+    },
+    {
+        "Id": 1337,
+        "Name": "ganache",
+        "Currency": "ETH",
+        "IsTest": true,
+        "RpcServer": [
+            "http://127.0.0.1:8545"
+        ],
+        "Explorer": "http://127.0.0.1:8545"
+    },
+    {
+        "Id": 12345,
+        "Name": "dev",
+        "Currency": "ETH",
+        "IsTest": true,
+        "RpcServer": [
+            "http://127.0.0.1:18130"
+        ],
+        "Explorer": "http://127.0.0.1:18130"
     }
 ]

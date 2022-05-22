@@ -12,6 +12,7 @@ type Database struct {
 	connection *sqlite.Conn
 }
 
+// new database instance (sqlite3)
 func NewDatabase(path string) *Database {
 	return &Database{
 		path:       path,
@@ -19,6 +20,7 @@ func NewDatabase(path string) *Database {
 	}
 }
 
+// open database for read and write
 func (db *Database) Open() error {
 	if db.connection != nil {
 		db.Close()
@@ -41,6 +43,7 @@ func (db *Database) Close() {
 	db.connection = nil
 }
 
+// exec sql on database
 func (db *Database) ExecSql(sql string, args ...interface{}) (int, error) {
 	if db.connection == nil {
 		return 0, errors.New("Database not opened")
@@ -68,6 +71,7 @@ func (db *Database) Query(sql string, args ...interface{}) ([][]interface{}, err
 			col := stmt.ColumnCount()
 			rows := make([]interface{}, 0, col)
 
+			// parse result, support int, float, text, bytes
 			for i := 0; i < col; i++ {
 				switch stmt.ColumnType(i) {
 				case sqlite.TypeInteger:
@@ -88,6 +92,7 @@ func (db *Database) Query(sql string, args ...interface{}) ([][]interface{}, err
 			return nil
 		},
 	})
+
 	if err != nil {
 		return make([][]interface{}, 0), err
 	}

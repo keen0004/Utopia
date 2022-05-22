@@ -20,6 +20,7 @@ func NewExcel(path string) (*Excel, error) {
 		return nil, errors.New("Invalid excel file path")
 	}
 
+	// change to abs path
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return nil, errors.New("Cant not get abs of path")
@@ -29,6 +30,7 @@ func NewExcel(path string) (*Excel, error) {
 }
 
 func (excel *Excel) Open() error {
+	// open excl file, create it if not exist
 	var err error
 	_, err = os.Stat(excel.path)
 	if os.IsNotExist(err) {
@@ -51,6 +53,7 @@ func (excel *Excel) Open() error {
 }
 
 func (excel *Excel) Close(save bool) {
+	// auto save on close excel
 	if excel.fd != nil {
 		if save {
 			excel.fd.SaveAs(excel.path)
@@ -62,6 +65,7 @@ func (excel *Excel) Close(save bool) {
 	excel.fd = nil
 }
 
+// read one cell value, index like "A2", "B10"
 func (excel *Excel) ReadCell(sheet string, index string) (string, error) {
 	if excel.fd == nil {
 		return "", errors.New("Excel file not opened")
@@ -70,11 +74,13 @@ func (excel *Excel) ReadCell(sheet string, index string) (string, error) {
 	return excel.fd.GetCellValue(sheet, index)
 }
 
+// write one cell value, index like "A2", "B10"
 func (excel *Excel) WriteCell(sheet string, index string, value string) error {
 	if excel.fd == nil {
 		return errors.New("Excel file not opened")
 	}
 
+	// create new sheet if not exist
 	if excel.fd.GetSheetIndex(sheet) == -1 {
 		excel.fd.NewSheet(sheet)
 	}
@@ -82,18 +88,20 @@ func (excel *Excel) WriteCell(sheet string, index string, value string) error {
 	return excel.fd.SetCellValue(sheet, index, value)
 }
 
+// read all cell value in sheet
 func (excel *Excel) ReadAll(sheet string) ([][]string, error) {
 	if excel.fd == nil {
-		return [][]string{}, errors.New("Excel file not opened")
+		return nil, errors.New("Excel file not opened")
 	}
 
 	if excel.fd.GetSheetIndex(sheet) == -1 {
-		return [][]string{}, errors.New("Invalid sheet")
+		return nil, errors.New("Invalid sheet")
 	}
 
 	return excel.fd.GetRows(sheet)
 }
 
+// write all cell value in sheet
 func (excel *Excel) WriteAll(sheet string, values [][]string) error {
 	if excel.fd == nil {
 		return errors.New("Excel file not opened")

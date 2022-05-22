@@ -37,7 +37,8 @@ func (c *EthContract) Address() string {
 	return c.address.Hex()
 }
 
-func (c *EthContract) Code() ([]byte, error) {
+func (c *EthContract) Code() (string, error) {
+	// read code from chain
 	return c.chain.Code(c.address.Hex())
 }
 
@@ -46,6 +47,7 @@ func (c *EthContract) ABI() string {
 }
 
 func (c *EthContract) SetABI(path string) error {
+	// read abi file content and parse to abi
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
@@ -62,7 +64,8 @@ func (c *EthContract) SetABI(path string) error {
 	return nil
 }
 
-func (c *EthContract) Deploy(code []byte, params string, wallet wallet.Wallet, value *big.Int) (string, error) {
+func (c *EthContract) Deploy(code string, params string, wallet wallet.Wallet, value *big.Int) (string, error) {
+	// parse the constructor params
 	method, args, err := helper.ParseParams(params)
 	if err != nil {
 		return "", err
@@ -72,6 +75,7 @@ func (c *EthContract) Deploy(code []byte, params string, wallet wallet.Wallet, v
 		return "", errors.New("method must be empty for constructor")
 	}
 
+	// parse abi for get constructor method
 	parsed, err := abi.JSON(strings.NewReader(string(c.abi)))
 	if err != nil {
 		return "", err
@@ -87,7 +91,6 @@ func (c *EthContract) Deploy(code []byte, params string, wallet wallet.Wallet, v
 
 			if p.Type.Elem != nil {
 				var subdata interface{}
-
 				subdata, index, err = helper.Str2Array(args, index, p.Type)
 				if err != nil {
 					return "", err
@@ -106,26 +109,31 @@ func (c *EthContract) Deploy(code []byte, params string, wallet wallet.Wallet, v
 		}
 	}
 
+	// get transaciton options for sign tx and set value
 	opts, err := c.chain.(*chain.EthChain).GenTransOpts(wallet, value)
 	if err != nil {
 		return "", err
 	}
 
-	address, _, _, err := bind.DeployContract(opts, parsed, code, c.chain.(*chain.EthChain).Client, data...)
+	// send deploy transaction
+	address, _, _, err := bind.DeployContract(opts, parsed, common.Hex2Bytes(code), c.chain.(*chain.EthChain).Client, data...)
 	if err != nil {
 		return "", err
 	}
 
+	// get contract address
 	c.address = address
 	return address.Hex(), nil
 }
 
 func (c *EthContract) Call(params string, wallet wallet.Wallet, value *big.Int) ([]interface{}, error) {
+	// parse the constructor params
 	method, args, err := helper.ParseParams(params)
 	if err != nil {
 		return nil, err
 	}
 
+	// parse abi for get call method
 	parsed, err := abi.JSON(strings.NewReader(string(c.abi)))
 	if err != nil {
 		return nil, err
@@ -145,7 +153,6 @@ func (c *EthContract) Call(params string, wallet wallet.Wallet, value *big.Int) 
 
 		if p.Type.Elem != nil {
 			var subdata interface{}
-
 			subdata, index, err = helper.Str2Array(args, index, p.Type)
 			if err != nil {
 				return nil, err
@@ -163,6 +170,7 @@ func (c *EthContract) Call(params string, wallet wallet.Wallet, value *big.Int) 
 		}
 	}
 
+	// call contract if method is read-only, otherwise send transaction
 	var result []interface{}
 	if m.IsConstant() {
 		err = c.client.Call(nil, &result, method, data...)
@@ -170,6 +178,7 @@ func (c *EthContract) Call(params string, wallet wallet.Wallet, value *big.Int) 
 			return nil, err
 		}
 	} else {
+		// get transaciton options for sign tx and set value
 		opts, err := c.chain.(*chain.EthChain).GenTransOpts(wallet, value)
 		if err != nil {
 			return nil, err
@@ -180,26 +189,28 @@ func (c *EthContract) Call(params string, wallet wallet.Wallet, value *big.Int) 
 			return nil, err
 		}
 
+		// return transaction hash
 		result = make([]interface{}, 0)
 		result = append(result, tx.Hash().Hex())
 	}
 
+	// todo: parse the call result or wait transction receipt
 	return result, nil
 }
 
-func (c *EthContract) EncodeABI(method string, data string, withfunc bool) ([]byte, error) {
+func (c *EthContract) EncodeABI(method string, data string, withfunc bool) (string, error) {
 	funcname, argtypes, err := helper.ParseParams(method)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	callMethod, args, err := helper.ParseParams(data)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	if strings.ToLower(funcname) != strings.ToLower(callMethod) {
-		return nil, errors.New("Not match call funcion name")
+		return "", errors.New("Not match call funcion name")
 	}
 
 	// trim space and change to lower case
@@ -218,32 +229,33 @@ func (c *EthContract) EncodeABI(method string, data string, withfunc bool) ([]by
 		arguments = append(arguments, abi.Argument{Type: argtype})
 	}
 
+	// get the function signature
 	result := make([]byte, 0)
 	if withfunc {
 		sig := fmt.Sprintf("%v(%v)", funcname, strings.Join(argtypes, ","))
 		result = append(result, crypto.Keccak256([]byte(sig))[:4]...)
 	}
 
+	// change string data to dst type
 	index := 0
 	argData := make([]interface{}, 0)
 	for _, p := range arguments {
 		if len(args) <= index {
-			return nil, errors.New("Not enough parameters")
+			return "", errors.New("Not enough parameters")
 		}
 
 		if p.Type.Elem != nil {
 			var subdata interface{}
-
 			subdata, index, err = helper.Str2Array(args, index, p.Type)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 
 			argData = append(argData, subdata)
 		} else {
 			v, err := helper.Str2Type(args[index], p.Type.GetType())
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 
 			argData = append(argData, v)
@@ -251,17 +263,20 @@ func (c *EthContract) EncodeABI(method string, data string, withfunc bool) ([]by
 		}
 	}
 
+	// pack all parameters
 	pack, err := arguments.Pack(argData...)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	result = append(result, pack...)
-
-	return result, nil
+	return "0x" + common.Bytes2Hex(result), nil
 }
 
-func (c *EthContract) DecodeABI(method string, data []byte, withfunc bool) (string, error) {
+func (c *EthContract) DecodeABI(method string, data string, withfunc bool) (string, error) {
+	rdata := common.Hex2Bytes(data)
+
+	// parse the function sig
 	funcname, argtypes, err := helper.ParseParams(method)
 	if err != nil {
 		return "", err
@@ -283,21 +298,24 @@ func (c *EthContract) DecodeABI(method string, data []byte, withfunc bool) (stri
 		arguments = append(arguments, abi.Argument{Type: argtype})
 	}
 
+	// check the method signature
 	if withfunc {
 		sig := fmt.Sprintf("%v(%v)", funcname, strings.Join(argtypes, ","))
 		funcsig := crypto.Keccak256([]byte(sig))[:4]
-		if hex.EncodeToString(funcsig) != hex.EncodeToString(data[:4]) {
+		if hex.EncodeToString(funcsig) != hex.EncodeToString(rdata[:4]) {
 			return "", errors.New("Not match function type")
 		}
 
-		data = data[4:]
+		rdata = rdata[4:]
 	}
 
-	parsed, err := arguments.Unpack(data)
+	// unpack all parameters
+	parsed, err := arguments.Unpack(rdata)
 	if err != nil {
 		return "", err
 	}
 
+	// change result to string
 	var builder strings.Builder
 	builder.WriteString(funcname)
 	builder.WriteString("(")

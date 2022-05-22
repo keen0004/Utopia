@@ -1,26 +1,6 @@
 {
-    "network": {
-        "eth": {
-            "currency": "ETH",
-            "chainid": 1,
-            "rpc" : ["https://rpc.ankr.com/eth", 
-                "https://main-rpc.linkpool.io", 
-                "https://eth-rpc.gateway.pokt.network"]
-        },
-        "rinkeby": {
-            "currency": "ETH",
-            "chainid": 4,
-            "rpc" : ["https://rinkeby.infura.io/v3/"]
-        },
-        "bsc": {
-            "currency": "BNB",
-            "chainid": 56,
-            "rpc" : ["https://bsc-dataseed.binance.org/"]
-        },
-        "plygon": {
-            "currency": "MATIC",
-            "chainid": 137,
-            "rpc" : ["https://rpc-mainnet.maticvigil.com"]
-        }
-    }
+    "chainlist": "../../configs/chainlist.json",
+    "accountlist": "../../configs/accounts.xlsx",
+    "network": "ganache",
+    "from": "0xEe9743771C11C99708A0091855e91ED50fa975e6"
 }

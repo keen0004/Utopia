@@ -1,9 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"utopia/internal/config"
 	"utopia/internal/helper"
-	"utopia/internal/logger"
 
 	"gopkg.in/urfave/cli.v1"
 )
@@ -26,9 +27,15 @@ func init() {
 }
 
 func main() {
-	err := app.Run(os.Args)
+	err := config.Config.LoadConfig("")
 	if err != nil {
-		logger.Error("Application run with error: %v", err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	err = app.Run(os.Args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

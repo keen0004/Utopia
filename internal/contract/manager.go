@@ -5,8 +5,8 @@ import "utopia/internal/chain"
 var (
 	ContractMap = map[int]func(chain.Chain, string) Contract{
 		COMMON_CRONTACT: NewEthContract,
-		// ERC20_CONTRACT:  NewERC20,
-		// ERC721_CONTRACT: NewERC721,
+		ERC20_CONTRACT:  NewERC20,
+		ERC721_CONTRACT: NewERC721,
 	}
 )
 
