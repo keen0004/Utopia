@@ -1,49 +1,52 @@
 package main
 
 import (
-	"encoding/hex"
-	"errors"
+	"encoding/json"
 	"fmt"
-	"strings"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"golang.org/x/crypto/sha3"
 )
 
-func ParseParams(params string) (string, []string, error) {
-	params = strings.Trim(params, " ")
+type Listing struct {
+	ID                float64           `json:"id"`
+	Name              string            `json:"name"`
+	Symbol            string            `json:"symbol"`
+	Slug              string            `json:"slug"`
+	CirculatingSupply float64           `json:"circulating_supply"`
+	TotalSupply       float64           `json:"total_supply"`
+	MaxSupply         float64           `json:"max_supply"`
+	DateAdded         string            `json:"date_added"`
+	NumMarketPairs    float64           `json:"num_market_pairs"`
+	CMCRank           float64           `json:"cmc_rank"`
+	LastUpdated       string            `json:"last_updated"`
+	Platform          Platform          `json:"platform"`
+	Quote             map[string]*Quote `json:"quote"`
+}
 
-	index := strings.Index(params, "(")
-	if index == -1 {
-		return "", []string{}, errors.New("Invalid parameters")
-	}
+// MapListing is the structure of a map listing
+type Platform struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	Symbol       string `json:"symbol"`
+	Slug         string `json:"slug"`
+	TokenAddress string `json:"token_address"`
+}
 
-	method := params[:index]
-	params = params[index+1:]
-
-	index = strings.Index(params, ")")
-	if index == -1 {
-		return "", []string{}, errors.New("Invalid parameters")
-	}
-
-	params = params[:index]
-	args := strings.Split(params, ",")
-
-	return method, args, nil
+// Quote is the quote structure
+type Quote struct {
+	Price            float64 `json:"price"`
+	Volume24H        float64 `json:"volume_24h"`
+	PercentChange1H  float64 `json:"percent_change_1h"`
+	PercentChange24H float64 `json:"percent_change_24h"`
+	PercentChange7D  float64 `json:"percent_change_7d"`
+	MarketCap        float64 `json:"market_cap"`
+	LastUpdated      string  `json:"last_updated"`
 }
 
 func main() {
-	// fmt.Printf(ParseParams("transfer(0x1234, 0x5678, 100)"))
+	data := ""
+	listing := new(Listing)
 
-	data := "0x01234567890abcdef"
-
-	fmt.Printf("0x%s\n", hex.EncodeToString(crypto.Keccak256(common.FromHex(data))))
-
-	var buf []byte
-	hash := sha3.NewLegacyKeccak256()
-	hash.Write(common.FromHex(data))
-	buf = hash.Sum(buf)
-
-	fmt.Printf("0x%s\n", hex.EncodeToString(buf))
+	err := json.Unmarshal([]byte(data), listing)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+	}
 }

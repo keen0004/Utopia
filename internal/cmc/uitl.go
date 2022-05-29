@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -22,20 +23,28 @@ func toFloat(rawFloat string) float64 {
 }
 
 // doReq HTTP client
-func doReq(req *http.Request) ([]byte, error) {
-	requestTimeout := time.Duration(30 * time.Second)
+func doReq(req *http.Request, proxy string) ([]byte, error) {
+	requestTimeout := time.Duration(10 * time.Second)
 	client := &http.Client{
 		Timeout: requestTimeout,
 	}
+
+	if proxy != "" {
+		u, _ := url.Parse(proxy)
+		client.Transport = &http.Transport{Proxy: http.ProxyURL(u)}
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
+
 	if 200 != resp.StatusCode {
 		return nil, fmt.Errorf("%s", body)
 	}
@@ -50,7 +59,7 @@ func (s *Client) makeReq(url string) ([]byte, error) {
 		return nil, err
 	}
 	req.Header.Set("X-CMC_PRO_API_KEY", s.proAPIKey)
-	resp, err := doReq(req)
+	resp, err := doReq(req, s.proxyUrl)
 	if err != nil {
 		return nil, err
 	}

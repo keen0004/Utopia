@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"utopia/internal/cmc"
 	"utopia/internal/excel"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -19,6 +20,9 @@ import (
 var (
 	TRANSFER_SHEET_NAME  = "transfer"
 	TRANSFER_LIST_HEADER = []string{"index", "from", "to", "value", "notes"}
+
+	CURRENCY_SHEET_NAME  = "currency"
+	CURRENCY_LIST_HEADER = []string{"id", "symbol", "rank", "current", "total", "pairs", "platform", "address", "price", "marketcap", "lastupdated"}
 )
 
 // transfer information
@@ -323,5 +327,49 @@ func SaveTransferFile(info []TransferInfo, path string) error {
 		data = append(data, row)
 	}
 
-	return file.WriteAll("transfer", data)
+	return file.WriteAll(TRANSFER_SHEET_NAME, data)
+}
+
+func WriteCurrencyFile(path string, list []*cmc.Listing) error {
+	// open excel file to write list
+	file, err := excel.NewExcel(path)
+	if err != nil {
+		return err
+	}
+
+	err = file.Open()
+	if err != nil {
+		return err
+	}
+	defer file.Close(true)
+
+	data := make([][]string, 0)
+	data = append(data, CURRENCY_LIST_HEADER)
+
+	// {"id", "symbol", "rank", "current", "total", "pairs", "platform", "address", "price", "marketcap", "lastupdated"}
+	for _, info := range list {
+		row := make([]string, 0, len(CURRENCY_LIST_HEADER))
+		row = append(row, strconv.Itoa(int(info.ID)))
+		row = append(row, info.Symbol)
+		row = append(row, strconv.Itoa(int(info.CMCRank)))
+		row = append(row, strconv.Itoa(int(info.CirculatingSupply)))
+		row = append(row, strconv.Itoa(int(info.TotalSupply)))
+		row = append(row, strconv.Itoa(int(info.NumMarketPairs)))
+		row = append(row, DefaultVlue(info.Platform.Symbol, "x"))
+		row = append(row, DefaultVlue(info.Platform.TokenAddress, "0x"))
+		quote, ok := info.Quote["USD"]
+		if ok {
+			row = append(row, strconv.Itoa(int(quote.Price)))
+			row = append(row, strconv.Itoa(int(quote.MarketCap)))
+			row = append(row, quote.LastUpdated)
+		} else {
+			row = append(row, "0")
+			row = append(row, "0")
+			row = append(row, "x")
+		}
+
+		data = append(data, row)
+	}
+
+	return file.WriteAll(CURRENCY_SHEET_NAME, data)
 }
