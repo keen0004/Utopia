@@ -74,7 +74,8 @@ func QueryCoin(ctx *cli.Context) error {
 	coin := ctx.String(CoinFlag.Name)
 	//file := ctx.String(FileFlag.Name)
 
-	client := cmc.NewClient(&cmc.Config{ProAPIKey: os.Getenv("CMC_KEY")})
+	// setenv CMC_PRO_API_KEY first
+	client := cmc.NewClient(nil)
 	if client == nil {
 		return errors.New("Create cmc client failed")
 	}
