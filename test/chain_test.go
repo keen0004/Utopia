@@ -181,8 +181,8 @@ func TestBalance(t *testing.T) {
 	defer c.DisConnect()
 
 	balance, err := c.Balance(account)
-	if helper.WeiToEth(&balance) <= 0 {
-		t.Errorf("Balance expect >0 but %f", helper.WeiToEth(&balance))
+	if helper.WeiToEth(balance) <= 0 {
+		t.Errorf("Balance expect >0 but %f", helper.WeiToEth(balance))
 	}
 }
 

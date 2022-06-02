@@ -330,7 +330,7 @@ func SaveTransferFile(info []TransferInfo, path string) error {
 	return file.WriteAll(TRANSFER_SHEET_NAME, data)
 }
 
-func WriteCurrencyFile(path string, list []*cmc.Listing) error {
+func WriteCurrencyFile(path string, money string, list []*cmc.Listing) error {
 	// open excel file to write list
 	file, err := excel.NewExcel(path)
 	if err != nil {
@@ -357,10 +357,10 @@ func WriteCurrencyFile(path string, list []*cmc.Listing) error {
 		row = append(row, strconv.Itoa(int(info.NumMarketPairs)))
 		row = append(row, DefaultVlue(info.Platform.Symbol, "x"))
 		row = append(row, DefaultVlue(info.Platform.TokenAddress, "0x"))
-		quote, ok := info.Quote["USD"]
+		quote, ok := info.Quote[money]
 		if ok {
-			row = append(row, strconv.Itoa(int(quote.Price)))
-			row = append(row, strconv.Itoa(int(quote.MarketCap)))
+			row = append(row, fmt.Sprintf("%.5f", quote.Price))
+			row = append(row, fmt.Sprintf("%.2f", quote.MarketCap))
 			row = append(row, quote.LastUpdated)
 		} else {
 			row = append(row, "0")

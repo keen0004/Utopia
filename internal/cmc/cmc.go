@@ -197,7 +197,7 @@ func (s *Client) Info(options *InfoOptions) (map[string]*CryptocurrencyInfo, err
 		return nil, err
 	}
 
-	var result = make(map[string]*CryptocurrencyInfo)
+	var result = make(map[string]*CryptocurrencyInfo, 0)
 	ifcs, ok := resp.Data.(map[string]interface{})
 	if !ok {
 		return nil, ErrTypeAssertion
@@ -250,7 +250,7 @@ func (s *Client) LatestListings(options *ListingOptions) ([]*Listing, error) {
 		return nil, fmt.Errorf("JSON Error: [%s]. Response body: [%s]", err.Error(), string(body))
 	}
 
-	var listings []*Listing
+	listings := make([]*Listing, 0)
 	ifcs, ok := resp.Data.([]interface{})
 	if !ok {
 		return nil, ErrTypeAssertion
@@ -304,7 +304,7 @@ func (s *Client) Map(options *MapOptions) ([]*MapListing, error) {
 		return nil, fmt.Errorf("JSON Error: [%s]. Response body: [%s]", err.Error(), string(body))
 	}
 
-	var result []*MapListing
+	result := make([]*MapListing, 0)
 	ifcs, ok := resp.Data.(interface{})
 	if !ok {
 		return nil, ErrTypeAssertion
@@ -352,7 +352,7 @@ func (s *Client) LatestQuotes(options *QuoteOptions) ([]*Listing, error) {
 		return nil, fmt.Errorf("JSON Error: [%s]. Response body: [%s]", err.Error(), string(body))
 	}
 
-	var quotesLatest []*Listing
+	quotesLatest := make([]*Listing, 0)
 	ifcs, ok := resp.Data.(interface{})
 	if !ok {
 		return nil, ErrTypeAssertion
@@ -379,7 +379,7 @@ func (s *Client) LatestQuotes(options *QuoteOptions) ([]*Listing, error) {
 }
 
 // PriceConversion Convert an amount of one currency into multiple cryptocurrencies or fiat currencies at the same time using the latest market averages. Optionally pass a historical timestamp to convert values based on historic averages.
-func (s *Client) PriceConversion(options *ConvertOptions) (*ConvertListing, error) {
+func (s *Client) PriceConversion(options *ConvertOptions) ([]*ConvertListing, error) {
 	var params []string
 	if options == nil {
 		options = new(ConvertOptions)
@@ -407,21 +407,26 @@ func (s *Client) PriceConversion(options *ConvertOptions) (*ConvertListing, erro
 		return nil, fmt.Errorf("JSON Error: [%s]. Response body: [%s]", err.Error(), string(body))
 	}
 
+	converList := make([]*ConvertListing, 0)
 	ifc, ok := resp.Data.(interface{})
 	if !ok {
 		return nil, ErrTypeAssertion
 	}
 
-	listing := new(ConvertListing)
-	b, err := json.Marshal(ifc)
-	if err != nil {
-		return nil, err
+	for _, obj := range ifc.([]interface{}) {
+		listing := new(ConvertListing)
+		b, err := json.Marshal(obj)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(b, listing)
+		if err != nil {
+			return nil, err
+		}
+
+		converList = append(converList, listing)
 	}
 
-	err = json.Unmarshal(b, listing)
-	if err != nil {
-		return nil, err
-	}
-
-	return listing, nil
+	return converList, nil
 }

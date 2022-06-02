@@ -26,7 +26,8 @@ func toFloat(rawFloat string) float64 {
 func doReq(req *http.Request, proxy string) ([]byte, error) {
 	requestTimeout := time.Duration(10 * time.Second)
 	client := &http.Client{
-		Timeout: requestTimeout,
+		Timeout:   requestTimeout,
+		Transport: &http.Transport{Proxy: http.ProxyFromEnvironment},
 	}
 
 	if proxy != "" {
