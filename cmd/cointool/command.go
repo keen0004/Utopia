@@ -173,12 +173,11 @@ func QueryCollection(ctx *cli.Context) error {
 
 	// shold set env HTTPS_PROXY
 	client := opensea.New()
-	c, err := client.Contract(context.Background(), &opensea.ContractRequest{AssetContractAddress: contract})
+	result, err := client.Contract(context.Background(), &opensea.ContractRequest{AssetContractAddress: contract})
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Contract: %v\n", c)
-
+	fmt.Fprintf(os.Stderr, "%v\n", result)
 	return nil
 }

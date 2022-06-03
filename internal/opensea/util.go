@@ -1,26 +1,12 @@
-package cmc
+package opensea
 
 import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
-	"strings"
 	"time"
 )
-
-// toInt helper for parsing strings to int
-func toInt(rawInt string) int {
-	parsed, _ := strconv.Atoi(strings.Replace(strings.Replace(rawInt, "$", "", -1), ",", "", -1))
-	return parsed
-}
-
-// toFloat helper for parsing strings to float
-func toFloat(rawFloat string) float64 {
-	parsed, _ := strconv.ParseFloat(strings.Replace(strings.Replace(strings.Replace(rawFloat, "$", "", -1), ",", "", -1), "%", "", -1), 64)
-	return parsed
-}
 
 // doReq HTTP client
 func doReq(req *http.Request, proxy string) ([]byte, error) {
@@ -59,7 +45,12 @@ func (s *Client) makeReq(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("X-CMC_PRO_API_KEY", s.proAPIKey)
+
+	req.Header.Set("Accept", "application/json")
+	if s.proAPIKey != "" {
+		req.Header.Set("X-API-KEY", s.proAPIKey)
+	}
+
 	resp, err := doReq(req, s.proxyUrl)
 	if err != nil {
 		return nil, err
