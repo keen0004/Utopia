@@ -248,7 +248,7 @@ func SignMessage(ctx *cli.Context) error {
 	}
 
 	// load configs
-	w, err := wallet.GetWallet(config.Config.From)
+	w, err := wallet.GetWallet(config.Config.Chain.From)
 	if err != nil {
 		return err
 	}

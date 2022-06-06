@@ -1,6 +1,16 @@
 {
-    "chainlist": "../../configs/chainlist.json",
-    "accountlist": "../../configs/accounts.xlsx",
-    "network": "ganache",
-    "from": "0xEe9743771C11C99708A0091855e91ED50fa975e6"
+    "service": {
+        "port": 1080,
+        "ssl": {
+            "cert": "../../configs/certs/server.cer",
+            "key": "../../configs/certs/server.key",
+            "password": "password"
+        }
+    },
+    "chain": {
+        "chainlist": "../../configs/chainlist.json",
+        "accountlist": "../../configs/accounts.xlsx",
+        "network": "ganache",
+        "from": "0xEe9743771C11C99708A0091855e91ED50fa975e6"
+    }
 }

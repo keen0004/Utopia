@@ -231,13 +231,13 @@ func DeployContract(ctx *cli.Context) error {
 	}
 
 	// get wallet for sign transaction
-	wallet, err := wallet.GetWallet(config.Config.From)
+	wallet, err := wallet.GetWallet(config.Config.Chain.From)
 	if err != nil {
 		return err
 	}
 
 	// get and connect chain
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}
@@ -283,13 +283,13 @@ func CallContract(ctx *cli.Context) error {
 	}
 
 	// get wallet for sign transaction
-	wallet, err := wallet.GetWallet(config.Config.From)
+	wallet, err := wallet.GetWallet(config.Config.Chain.From)
 	if err != nil {
 		return err
 	}
 
 	// get chain meta and connect
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}
@@ -326,7 +326,7 @@ func QueryERC20(ctx *cli.Context) error {
 	account := ctx.String(AccountFlag.Name)
 
 	// get chain meta and connect
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}
@@ -361,7 +361,7 @@ func TransferERC20(ctx *cli.Context) error {
 	translist := make([]helper.TransferInfo, 0)
 	if to != "" && value != "" {
 		translist = append(translist, helper.TransferInfo{
-			From:  config.Config.From,
+			From:  config.Config.Chain.From,
 			To:    to,
 			Value: value,
 		})
@@ -378,7 +378,7 @@ func TransferERC20(ctx *cli.Context) error {
 	}
 
 	// get chain meta and connect it
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}
@@ -421,13 +421,13 @@ func ApproveERC20(ctx *cli.Context) error {
 	fv, _ := strconv.ParseFloat(value, 64)
 
 	// get wallet for sign transaction
-	wallet, err := wallet.GetWallet(config.Config.From)
+	wallet, err := wallet.GetWallet(config.Config.Chain.From)
 	if err != nil {
 		return err
 	}
 
 	// get chain meta and connect it
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}
@@ -459,7 +459,7 @@ func QueryERC721(ctx *cli.Context) error {
 	account := ctx.String(AccountFlag.Name)
 
 	// get chain meta and connect
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}
@@ -494,7 +494,7 @@ func TransferERC721(ctx *cli.Context) error {
 	translist := make([]helper.TransferInfo, 0)
 	if to != "" && value != "" {
 		translist = append(translist, helper.TransferInfo{
-			From:  config.Config.From,
+			From:  config.Config.Chain.From,
 			To:    to,
 			Value: value,
 		})
@@ -511,7 +511,7 @@ func TransferERC721(ctx *cli.Context) error {
 	}
 
 	// get chain meta and connect it
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}
@@ -555,13 +555,13 @@ func ApproveERC721(ctx *cli.Context) error {
 	tokenId, _ := strconv.ParseUint(value, 10, 64)
 
 	// get wallet for sign transaction
-	wallet, err := wallet.GetWallet(config.Config.From)
+	wallet, err := wallet.GetWallet(config.Config.Chain.From)
 	if err != nil {
 		return err
 	}
 
 	// get chain meta and connect it
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}
@@ -594,7 +594,7 @@ func PropertyQuery(ctx *cli.Context) error {
 	tokenId, _ := strconv.ParseUint(value, 10, 64)
 
 	// get chain meta and connect it
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}

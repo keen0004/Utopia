@@ -103,7 +103,7 @@ func QueryBalance(ctx *cli.Context) error {
 	address := ctx.String(AddressFlag.Name)
 
 	// get chain meta and connect it
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func TransferBalance(ctx *cli.Context) error {
 	translist := make([]helper.TransferInfo, 0)
 	if to != "" && value != "" {
 		translist = append(translist, helper.TransferInfo{
-			From:  config.Config.From,
+			From:  config.Config.Chain.From,
 			To:    to,
 			Value: value,
 		})
@@ -148,7 +148,7 @@ func TransferBalance(ctx *cli.Context) error {
 	}
 
 	// get chain meta and connect it
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func Speedup(ctx *cli.Context) error {
 	hash := ctx.String(HashFlag.Name)
 
 	// get chain meta and connect it
-	meta, err := chain.ChainMetaByName(config.Config.Network)
+	meta, err := chain.ChainMetaByName(config.Config.Chain.Network)
 	if err != nil {
 		return err
 	}
@@ -223,7 +223,7 @@ func Speedup(ctx *cli.Context) error {
 	}
 
 	// get wallet for sign transaction
-	wallet, err := wallet.GetWallet(config.Config.From)
+	wallet, err := wallet.GetWallet(config.Config.Chain.From)
 	if err != nil {
 		return err
 	}
